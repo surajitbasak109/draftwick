@@ -575,6 +575,11 @@ function applyAppearance(settings: api.Settings) {
     "--editor-max-width",
     settings.wrap_column === 0 ? "none" : `calc(${settings.wrap_column}ch + 48px)`,
   );
+  editor.setOptions({
+    lineNumbers: settings.show_line_numbers,
+    tabSize: settings.tab_size,
+    tabsToSpaces: settings.translate_tabs_to_spaces,
+  });
   editor.refreshLayout();
 }
 

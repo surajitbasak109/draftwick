@@ -64,6 +64,10 @@ export interface Settings {
   font_family: string;
   /** Characters per line before wrapping; 0 wraps at the window edge. */
   wrap_column: number;
+  show_line_numbers: boolean;
+  tab_size: number;
+  /** True: the Tab key types spaces; false: a tab character. */
+  translate_tabs_to_spaces: boolean;
 }
 
 export interface LoadedSettings {

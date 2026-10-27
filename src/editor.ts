@@ -1,14 +1,63 @@
-import { EditorState, type Extension } from "@codemirror/state";
-import { EditorView, drawSelection, keymap } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { Compartment, EditorSelection, EditorState, countColumn, type Extension } from "@codemirror/state";
+import { EditorView, drawSelection, keymap, lineNumbers } from "@codemirror/view";
+import { defaultKeymap, history, historyKeymap, indentLess, indentMore } from "@codemirror/commands";
 import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { tags as t } from "@lezer/highlight";
 import { linter, lintGutter } from "@codemirror/lint";
 import type { SettingsDiagnostic } from "./api";
 import { jsonc } from "./jsonc";
 import type { Eol } from "./lineEndings";
+
+/** How editing feels: set from the settings file (see settings.rs). */
+export interface EditorOptions {
+  lineNumbers: boolean;
+  tabSize: number;
+  /** True: Tab types spaces; false: it types a tab character. */
+  tabsToSpaces: boolean;
+}
+
+const DEFAULT_OPTIONS: EditorOptions = { lineNumbers: false, tabSize: 4, tabsToSpaces: true };
+
+// The options live in a compartment, so they can change on the open document without rebuilding it.
+const optionsSlot = new Compartment();
+
+/**
+ * Tab: with a single-line selection (or none) it types a tab, or spaces up to the next tab stop;
+ * with several lines selected it indents them all. Shift+Tab takes the indent back.
+ */
+function tabCommand(options: EditorOptions) {
+  return (view: EditorView): boolean => {
+    const { state } = view;
+    const multiLine = state.selection.ranges.some(
+      (r) => state.doc.lineAt(r.from).number !== state.doc.lineAt(r.to).number,
+    );
+    if (multiLine) return indentMore(view);
+    view.dispatch(
+      state.changeByRange((range) => {
+        const line = state.doc.lineAt(range.from);
+        const column = countColumn(line.text.slice(0, range.from - line.from), options.tabSize);
+        const insert = options.tabsToSpaces ? " ".repeat(options.tabSize - (column % options.tabSize)) : "\t";
+        return {
+          changes: { from: range.from, to: range.to, insert },
+          range: EditorSelection.cursor(range.from + insert.length),
+        };
+      }),
+      { scrollIntoView: true, userEvent: "input" },
+    );
+    return true;
+  };
+}
+
+function optionsExtensions(o: EditorOptions): Extension {
+  return [
+    o.lineNumbers ? lineNumbers() : [],
+    EditorState.tabSize.of(o.tabSize),
+    indentUnit.of(o.tabsToSpaces ? " ".repeat(o.tabSize) : "\t"),
+    keymap.of([{ key: "Tab", run: tabCommand(o), shift: indentLess }]),
+  ];
+}
 
 export interface EditorHandle {
   /** `eol` is the line ending the text had on disk; getDoc() writes it back the same way. */
@@ -20,6 +69,8 @@ export interface EditorHandle {
   focus(): void;
   /** Re-measures the text after the font or the wrap width changed. */
   refreshLayout(): void;
+  /** Applies line numbers and tab settings to the open document and to the ones opened later. */
+  setOptions(options: EditorOptions): void;
 }
 
 interface Handlers {
@@ -107,9 +158,15 @@ function settingsExtensions(handlers: Handlers): Extension[] {
   ];
 }
 
-function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean): Extension[] {
+function extensionsFor(
+  ext: string,
+  handlers: Handlers,
+  isLoading: () => boolean,
+  options: EditorOptions,
+): Extension[] {
   const isMarkdown = ext === "md";
   return [
+    optionsSlot.of(optionsExtensions(options)),
     history(),
     drawSelection(),
     search({ top: true }),
@@ -155,9 +212,10 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
   // CodeMirror normalizes line endings to "\n" while editing; this restores them on save.
   let eol: Eol = "\n";
   const isLoading = () => loading;
+  let options = DEFAULT_OPTIONS;
   const view = new EditorView({
     parent,
-    state: EditorState.create({ doc: "", extensions: extensionsFor("md", handlers, isLoading) }),
+    state: EditorState.create({ doc: "", extensions: extensionsFor("md", handlers, isLoading, options) }),
   });
 
   return {
@@ -167,7 +225,10 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
       try {
         // A fresh state also resets undo history, so Ctrl+Z can't cross into another note.
         view.setState(
-          EditorState.create({ doc: text, extensions: extensionsFor(ext, handlers, isLoading) }),
+          EditorState.create({
+            doc: text,
+            extensions: extensionsFor(ext, handlers, isLoading, options),
+          }),
         );
       } finally {
         loading = false;
@@ -177,5 +238,9 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
     isEmpty: () => view.state.doc.length === 0,
     focus: () => view.focus(),
     refreshLayout: () => view.requestMeasure(),
+    setOptions(next) {
+      options = next;
+      view.dispatch({ effects: optionsSlot.reconfigure(optionsExtensions(next)) });
+    },
   };
 }

@@ -38,6 +38,10 @@ pub const WRAP_COLUMN_DEFAULT: u32 = 70;
 pub const WRAP_COLUMN_MIN: u32 = 20;
 pub const WRAP_COLUMN_MAX: u32 = 300;
 
+/// Width of a tab, in characters. Only these sizes are accepted; anything else uses the default.
+pub const TAB_SIZE_DEFAULT: u32 = 4;
+pub const TAB_SIZES: [u32; 3] = [2, 4, 8];
+
 /// A font name is shown to the web view as part of a CSS font list, so only plain name characters
 /// are accepted: letters, digits, spaces and . _ -
 fn valid_font_name(name: &str) -> bool {
@@ -80,6 +84,10 @@ pub struct Settings {
     /// A font name, or empty for the system's monospace font.
     pub font_family: String,
     pub wrap_column: u32,
+    pub show_line_numbers: bool,
+    pub tab_size: u32,
+    /// Whether the Tab key inserts spaces (true) or a tab character (false).
+    pub translate_tabs_to_spaces: bool,
 }
 
 impl Default for Settings {
@@ -90,6 +98,9 @@ impl Default for Settings {
             font_size: FONT_SIZE_DEFAULT,
             font_family: String::new(),
             wrap_column: WRAP_COLUMN_DEFAULT,
+            show_line_numbers: false,
+            tab_size: TAB_SIZE_DEFAULT,
+            translate_tabs_to_spaces: true,
         }
     }
 }
@@ -614,6 +625,38 @@ fn analyze(text: &str) -> Analysis {
                     ),
                 )),
             },
+            "show_line_numbers" => match object.get("show_line_numbers").and_then(serde_json::Value::as_bool) {
+                Some(on) => analysis.settings.show_line_numbers = on,
+                None => analysis.diagnostics.push(positions.diagnostic(
+                    value_from,
+                    value_to,
+                    "warning",
+                    "show_line_numbers must be true or false; using false.".into(),
+                )),
+            },
+            "translate_tabs_to_spaces" => {
+                match object.get("translate_tabs_to_spaces").and_then(serde_json::Value::as_bool) {
+                    Some(on) => analysis.settings.translate_tabs_to_spaces = on,
+                    None => analysis.diagnostics.push(positions.diagnostic(
+                        value_from,
+                        value_to,
+                        "warning",
+                        "translate_tabs_to_spaces must be true or false; using true.".into(),
+                    )),
+                }
+            }
+            "tab_size" => {
+                let given = object.get("tab_size").and_then(serde_json::Value::as_f64);
+                match given.filter(|n| TAB_SIZES.iter().any(|&size| f64::from(size) == *n)) {
+                    Some(n) => analysis.settings.tab_size = n as u32,
+                    None => analysis.diagnostics.push(positions.diagnostic(
+                        value_from,
+                        value_to,
+                        "warning",
+                        format!("tab_size must be 2, 4 or 8; using {TAB_SIZE_DEFAULT}."),
+                    )),
+                }
+            }
             other => analysis.diagnostics.push(positions.diagnostic(
                 key_from,
                 key_to,
@@ -789,11 +832,58 @@ mod tests {
     }
 
     #[test]
+    fn editing_settings_have_defaults_and_read_values() {
+        let d = Settings::default();
+        assert_eq!((d.show_line_numbers, d.tab_size, d.translate_tabs_to_spaces), (false, 4, true));
+        let loaded = parse(r#"{ "show_line_numbers": true, "tab_size": 2, "translate_tabs_to_spaces": false }"#);
+        assert!(loaded.problems.is_empty(), "{:?}", loaded.problems);
+        let s = loaded.settings;
+        assert_eq!((s.show_line_numbers, s.tab_size, s.translate_tabs_to_spaces), (true, 2, false));
+    }
+
+    #[test]
+    fn tab_size_is_2_4_or_8_and_anything_else_uses_4_with_a_warning() {
+        for size in [2, 4, 8] {
+            let loaded = parse(&format!(r#"{{ "tab_size": {size} }}"#));
+            assert_eq!(loaded.settings.tab_size, size);
+            assert!(loaded.problems.is_empty(), "{size}");
+        }
+        assert_eq!(parse(r#"{ "tab_size": 4.0 }"#).settings.tab_size, 4);
+        for text in [
+            r#"{ "tab_size": 3 }"#,
+            r#"{ "tab_size": 0 }"#,
+            r#"{ "tab_size": 6 }"#,
+            r#"{ "tab_size": 16 }"#,
+            r#"{ "tab_size": 2.5 }"#,
+            r#"{ "tab_size": -2 }"#,
+            r#"{ "tab_size": "8" }"#,
+            r#"{ "tab_size": null }"#,
+        ] {
+            let loaded = parse(text);
+            assert_eq!(loaded.settings.tab_size, 4, "{text}");
+            assert_eq!(loaded.problems.len(), 1, "{text}");
+            assert!(loaded.valid, "{text}");
+        }
+        // an out-of-list value is underlined at the value
+        assert_eq!(covered(r#"{ "tab_size": 3 }"#, &only(r#"{ "tab_size": 3 }"#)), "3");
+    }
+
+    #[test]
+    fn the_show_and_translate_flags_must_be_booleans() {
+        for text in [r#"{ "show_line_numbers": "yes" }"#, r#"{ "translate_tabs_to_spaces": 1 }"#] {
+            assert_eq!(parse(text).problems.len(), 1, "{text}");
+            assert!(parse(text).valid, "{text}");
+        }
+        assert!(!parse(r#"{ "show_line_numbers": "yes" }"#).settings.show_line_numbers);
+        assert!(parse(r#"{ "translate_tabs_to_spaces": 1 }"#).settings.translate_tabs_to_spaces);
+    }
+
+    #[test]
     fn the_example_file_is_valid_and_lists_every_setting() {
         let loaded = parse(DEFAULT_FILE);
         assert!(loaded.valid && loaded.problems.is_empty(), "{:?}", loaded.problems);
         assert_eq!(loaded.settings, Settings::default());
-        for name in ["autosave_delay_ms", "theme", "font_size", "font_family", "wrap_column"] {
+        for name in ["autosave_delay_ms", "theme", "font_size", "font_family", "wrap_column", "show_line_numbers", "tab_size", "translate_tabs_to_spaces"] {
             assert!(DEFAULT_FILE.contains(&format!("// \"{name}\":")), "{name} is missing");
         }
     }

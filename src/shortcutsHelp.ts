@@ -11,6 +11,8 @@ const EDITOR_SHORTCUTS: [label: string, keys: string][] = [
   ["Select next occurrence", "Ctrl+D"],
   ["Undo", "Ctrl+Z"],
   ["Redo", "Ctrl+Shift+Z"],
+  ["Indent (type a tab, or indent the selected lines)", "Tab"],
+  ["Remove one indent", "Shift+Tab"],
 ];
 
 export interface ShortcutsHelp {

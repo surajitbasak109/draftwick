@@ -52,9 +52,9 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [x] Font family (default: the system's monospace font). Checked by the user on 2026-10-27; `"font_family": "Fira Code"`; an uninstalled name falls back to monospace.
 - [x] Font size (default 14 px; the editor was 15 px before). Checked by the user on 2026-10-27; `"font_size"`, 8 to 48.
 - [ ] Theme: `system`, `dark` or `light` (default `system`). Built, needs your check: add `"theme": "light"` (or `"dark"`) to `settings.json`, save with `Ctrl+S`, and the window should switch at once; remove the line (or use `"system"`) and it should follow the operating system again. A wrong value (say `"blue"`) should underline and fall back to `system`. Also use it to check the sidebar right-click menu in light mode.
-- [ ] Show line numbers (default `false`).
-- [ ] Tab size (default 4).
-- [ ] Translate tabs to spaces (default `true`). This also decides what the Tab key does: today it moves focus out of the editor.
+- [x] Show line numbers (default `false`). Checked by the user on 2026-10-27; `"show_line_numbers": true`.
+- [x] Tab size (default 4). Checked by the user on 2026-10-27; `"tab_size"`: only 2, 4 or 8 are allowed; any other value shows a warning and uses 4.
+- [x] Translate tabs to spaces (default `true`). Checked by the user on 2026-10-27; Tab now types spaces up to the next tab stop (or a tab character when `false`); with several lines selected it indents them, and Shift+Tab removes an indent. It no longer moves focus out of the editor.
 - [x] ~~Auto indent~~ Dropped 2026-10-27: Enter already keeps the indentation and continues Markdown lists, and nobody needs to turn that off.
 - [ ] A Settings dialog on top of the settings file (phase 2).
 - [ ] Optional: reload the settings automatically when the window regains focus.

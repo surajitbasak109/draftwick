@@ -27,4 +27,16 @@
   // the text is shown; no line break is added to the file. Allowed range: 20 to 300, or 0 to wrap
   // at the edge of the window. Default: 70.
   // "wrap_column": 70
+
+  // Show a line number beside each line. Default: false.
+  // "show_line_numbers": false
+
+  // How wide a tab is, in characters. Only 2, 4 or 8 are allowed; anything else is reported and
+  // 4 is used. Default: 4.
+  // "tab_size": 4
+
+  // What the Tab key types: true inserts spaces (up to the next tab stop), false inserts a tab
+  // character. With several lines selected, Tab indents them all and Shift+Tab takes the indent
+  // back. Default: true.
+  // "translate_tabs_to_spaces": true
 }
