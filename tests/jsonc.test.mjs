@@ -104,3 +104,12 @@ test("the example settings file is all comments and braces, nothing flagged as a
   assert.equal(classOf(enabled, '"autosave_delay_ms"'), "property");
   assert.equal(classOf(enabled, "2000"), "number");
 });
+
+test("the autosave default is the same in the app and in the settings code", () => {
+  const rust = readFileSync(new URL("../src-tauri/src/settings.rs", import.meta.url), "utf8");
+  const main = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+  const inRust = rust.match(/AUTOSAVE_DELAY_DEFAULT_MS: u64 = ([\d_]+);/);
+  const inMain = main.match(/DEFAULT_AUTOSAVE_DELAY_MS = ([\d_]+);/);
+  assert.ok(inRust && inMain, "could not find both autosave defaults");
+  assert.equal(Number(inMain[1].replaceAll("_", "")), Number(inRust[1].replaceAll("_", "")));
+});

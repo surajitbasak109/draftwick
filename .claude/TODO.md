@@ -71,6 +71,6 @@ From the consent review. You chose items 1 to 4 of that review and left these.
 ## Housekeeping
 
 - [ ] Keep the browser-test stand-in backend in the repo as a dev tool (for example under `dev/`) and document it in `.claude/CLAUDE.md`.
-- [ ] Bring `.claude/PLAN.md` sections 3 and 4 up to date with the code, and say "draft" instead of "note" in the older sections.
-- [ ] The default autosave delay (5000 ms) is written in two places: `settings.rs` and `main.ts`. Make it one.
+- [x] Brought `.claude/PLAN.md` sections 3 and 4 up to date with the code, and said "draft" instead of "note" in the older sections (2026-10-27). Internal names (`notes_dir`, `notes.rs`, `NoteMeta`) stay.
+- [x] The default autosave delay (5000 ms) is still written in `settings.rs` and `main.ts`, but a test in `tests/jsonc.test.mjs` now fails if the two ever differ (2026-10-27). The frontend needs a number before the settings load, so one copy had to stay.
 - [ ] The editor keys listed in Help > Keyboard shortcuts are a fixed list; keep them in step with `editor.ts`, or generate them.

@@ -38,19 +38,19 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exce
 | Platforms | Cross-platform (Linux first, Ubuntu is the daily driver; Windows/macOS should build but are tested later) | The web stack makes cross-platform nearly free |
 | Shell | **Tauri 2** (Rust) | About 10 MB binary, fast startup, native dialogs |
 | Frontend | **TypeScript + Vite, vanilla (no React/Vue)** | Less overhead, faster startup, one less dependency |
-| Editor | **CodeMirror 6** + `@codemirror/lang-markdown` | The best web editor core; handles typical note sizes instantly |
+| Editor | **CodeMirror 6** + `@codemirror/lang-markdown` | The best web editor core; handles typical draft sizes instantly |
 | File I/O | **Custom Rust commands** (not `tauri-plugin-fs` from JS) | The draft directory is picked at runtime; Rust commands avoid fs-scope config pain and keep naming logic testable |
 | Folder picker | `tauri-plugin-dialog` | Native folder dialog |
 | Config storage | JSON file in `~/.config/draftwick/config.json` (the platform config folder plus `draftwick`; one function, `config::config_dir`, decides it), read/written by Rust | No extra plugin |
 | Consent rule | **Nothing happens without an explicit user action**: no system dialog on launch, no folder created unless the user asks | The user must never be surprised by a prompt or a silent change |
 | Folder choice | Welcome screen with **"Choose draft directory…"** (primary) and **"Use ~/Drafts instead"** (secondary link); `~/Drafts` is created only when that link is clicked | Replaces the earlier auto-dialog + silent `~/Drafts` fallback |
-| New-note filename | **`YYYY-MM-DD HH-mm.md`** (local time), e.g. `2026-10-27 14-05.md` | `:` is illegal on Windows and shows oddly on macOS |
-| Filename collision | Append ` (2)`, ` (3)`, … before `.md` | Two notes in the same minute must not overwrite each other |
-| Saving | **Autosave** after the user stops typing (default **5 seconds**, configurable from 500 ms to 30 s, see M9; every keystroke restarts the wait), and always on blur, switching drafts and close, **only for notes inside the draft directory**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
+| New-draft filename | **`YYYY-MM-DD HH-mm.md`** (local time), e.g. `2026-10-27 14-05.md` | `:` is illegal on Windows and shows oddly on macOS |
+| Filename collision | Append ` (2)`, ` (3)`, … before `.md` | Two drafts in the same minute must not overwrite each other |
+| Saving | **Autosave** after the user stops typing (default **5 seconds**, configurable from 500 ms to 30 s, see M9; every keystroke restarts the wait), and always on blur, switching drafts and close, **only for drafts inside the draft directory**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
 | Files outside the draft directory | **Never autosaved.** Saved only with `Ctrl+S`; leaving or closing with unsaved edits asks **Save / Don't Save / Cancel**. The title shows "(autosave off)" | Consent rule: don't write to a file the user opened from elsewhere unless they ask |
-| Deleted or moved files | **A file that disappears while it is open is never silently recreated.** Saving asks **Save again / Close without saving / Keep editing**; "Keep editing" is the focused button because the prompt can appear mid-typing, so a stray Enter is harmless. After Keep editing, autosave stays off until the user presses `Ctrl+S`, which recreates the file. Rust's `write_note` takes `create_if_missing` and reports `kind: "missing"` | A note the user deleted should stay deleted unless they say otherwise |
-| Implicit vs explicit saves | Saves started by the app (typing timer, blur, leaving a note) re-check at run time that autosave is still allowed; only `Ctrl+S` or answering a prompt is an explicit save | A save waiting in the queue must not act on an outdated situation |
-| Emptied notes | **Autosave never replaces a file that has text with an empty document.** Clearing a note pauses autosave (title shows "(autosave off)", plus a toast); only `Ctrl+S` writes the empty note. Leaving or closing it asks Save / Don't Save / Cancel. Typing again resumes autosave | An accidental select-all + delete must not wipe the file |
+| Deleted or moved files | **A file that disappears while it is open is never silently recreated.** Saving asks **Save again / Close without saving / Keep editing**; "Keep editing" is the focused button because the prompt can appear mid-typing, so a stray Enter is harmless. After Keep editing, autosave stays off until the user presses `Ctrl+S`, which recreates the file. Rust's `write_note` takes `create_if_missing` and reports `kind: "missing"` | A draft the user deleted should stay deleted unless they say otherwise |
+| Implicit vs explicit saves | Saves started by the app (typing timer, blur, leaving a draft) re-check at run time that autosave is still allowed; only `Ctrl+S` or answering a prompt is an explicit save | A save waiting in the queue must not act on an outdated situation |
+| Emptied drafts | **Autosave never replaces a file that has text with an empty document.** Clearing a draft pauses autosave (title shows "(autosave off)", plus a toast); only `Ctrl+S` writes the empty draft. Leaving or closing it asks Save / Don't Save / Cancel. Typing again resumes autosave | An accidental select-all + delete must not wipe the file |
 | Line endings | **Preserved exactly.** CRLF, LF or CR is detected when a file is opened and written back unchanged (CodeMirror itself normalizes to LF). A file that **mixes** endings is not autosaved; an explicit save converts every line to its most common ending | Opening and saving must never silently rewrite lines the user didn't touch |
 | Theme | Dark by default, follows the OS `prefers-color-scheme` | |
 
@@ -59,18 +59,18 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exce
 ## 2. Behavior spec
 
 ### First launch
-1. If `config.json` has no `notesDir`, show a **welcome screen** instead of the editor. **No system dialog opens by itself.** Keyboard shortcuts do nothing while it is showing.
-2. **"Choose draft directory…"** opens the native folder picker (titled "Choose a folder for your notes"). If a folder is chosen, save it as `notesDir` and open the editor. If the picker is cancelled, the user simply stays on the welcome screen; nothing is saved or created.
-3. **"Use ~/Drafts instead"** creates `<home>/Notes` if missing, saves it as `notesDir`, and opens the editor. This is the only path that creates a folder, and only on click.
+1. If `config.json` has no `notes_dir`, show a **welcome screen** instead of the editor. **No system dialog opens by itself.** Keyboard shortcuts do nothing while it is showing.
+2. **"Choose draft directory…"** opens the native folder picker (titled "Choose a directory for your drafts"). If a folder is chosen, save it as `notes_dir` and open the editor. If the picker is cancelled, the user simply stays on the welcome screen; nothing is saved or created.
+3. **"Use ~/Drafts instead"** creates `<home>/Drafts` if missing, saves it as `notes_dir`, and opens the editor. This is the only path that creates a folder, and only on click.
 
 ### Every launch
-- Load `notesDir`. If it no longer exists, show the welcome screen again.
-- Open a **new empty note** in the editor. **Don't create the file on disk until the first character is typed**, so there are no empty junk files.
+- Load `notes_dir`. If it no longer exists, show the welcome screen again.
+- Open a **new empty draft** in the editor. **Don't create the file on disk until the first character is typed**, so there are no empty junk files.
 - The filename is fixed at the moment the file is first written (timestamp of first keystroke).
 
 ### Sidebar (left, collapsible with `Ctrl+B`)
 - A visible show/hide control, and remembering the choice, are planned in M8.
-- Lists `.md` and `.txt` files in `notesDir` (not recursive), **newest modified first**.
+- Lists `.md` and `.txt` files in `notes_dir` (not recursive), **newest modified first**.
 - Click to open. The active file is highlighted.
 - Refresh after every create/save. Don't poll and don't use a file watcher in v1.
 
@@ -82,18 +82,18 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exce
 ### Keyboard shortcuts
 | Keys | Action |
 |---|---|
-| `Ctrl+N` | New note (autosaves the current one first; for an outside file with unsaved edits, asks Save / Don't Save / Cancel) |
-| `Ctrl+O` | Open any `.md`/`.txt` file via native file dialog (may be outside `notesDir`; outside files are not autosaved, see Saving) |
+| `Ctrl+N` | New draft (autosaves the current one first; for an outside file with unsaved edits, asks Save / Don't Save / Cancel) |
+| `Ctrl+O` | Open any `.md`/`.txt` file via native file dialog (may be outside `notes_dir`; outside files are not autosaved, see Saving) |
 | `Ctrl+S` | Save now |
 | `Ctrl+P` | Quick switcher: fuzzy filter over sidebar files, Enter to open |
 | `Ctrl+B` | Toggle sidebar (View → Show sidebar, with a tick) |
 | `Ctrl+,` | Settings: change draft directory (folder picker again) |
 | `Ctrl+Shift+R` | Rename current file (inline input; keep the extension; reject `/ \ : * ? " < > \|`) |
-| `Ctrl+W` | Close current note (save first) → new empty note |
+| `Ctrl+W` | Close current draft (save first) → new empty draft |
 | `Ctrl+Q` | Quit: closes the window through the normal close path, so unsaved work is still asked about |
 
 ### Closing the app
-- Notes inside the draft directory: flush the pending autosave before the window closes (handle the Tauri `close-requested` event), with no dialog.
+- Drafts inside the draft directory: flush the pending autosave before the window closes (handle the Tauri `close-requested` event), with no dialog.
 - A file from outside the draft directory with unsaved edits: keep the window open and ask **Save / Don't Save / Cancel**. Cancel keeps the window open; Save that fails also keeps it open.
 - Whether a file is "inside" is decided in Rust (`is_in_notes_dir`): both paths are canonicalized, so symlinks pointing out of the folder count as outside.
 
@@ -101,54 +101,81 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exce
 
 ## 3. Project structure
 
+*Brought up to date on 2026-10-27. The files in `src` and `src-tauri/src` are the truth; this is a map.*
+
 ```
 draftwick/
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── index.html
-├── src/                     # frontend (TypeScript)
-│   ├── main.ts              # bootstrap: load config → first-launch flow → mount editor
-│   ├── editor.ts            # CodeMirror setup, language switching by extension
-│   ├── sidebar.ts           # file list rendering + click handling
-│   ├── switcher.ts          # Ctrl+P fuzzy switcher
-│   ├── rename.ts            # Ctrl+Shift+R rename prompt
-│   ├── choice.ts            # three-button prompt (Save / Don't Save / Cancel, Save again / ...)
-│   ├── lineEndings.ts       # detect CRLF / LF / CR so saving can restore them
-│   ├── autosave.ts          # debounce + flush
-│   ├── shortcuts.ts         # global keymap
-│   ├── api.ts               # typed wrappers around invoke() for every Rust command
-│   └── styles.css           # CSS variables, dark/light
+├── package.json, pnpm-lock.yaml, vite.config.ts, tsconfig.json
+├── index.html                     # the page: welcome screen, editor, sidebar, status bar, dialogs
+├── settings.example.jsonc         # the commented template Settings > Open settings file writes (built into the app)
+├── tests/                         # plain Node tests (pnpm test)
+├── src/                           # frontend (TypeScript)
+│   ├── main.ts                    # start-up, the open draft, actions, autosave policy, settings handling, status bar
+│   ├── editor.ts                  # CodeMirror: language by extension, options (line numbers, tabs), cursor reporting
+│   ├── sidebar.ts                 # draft list, hover trash button, right-click menu
+│   ├── contextMenu.ts             # the small popup menu
+│   ├── switcher.ts                # Ctrl+P quick switcher
+│   ├── rename.ts                  # rename prompt
+│   ├── choice.ts                  # two- or three-button prompt (Save / Don't Save / Cancel ...)
+│   ├── about.ts, shortcutsHelp.ts # the About and Keyboard shortcuts dialogs
+│   ├── lineEndings.ts             # detect CRLF / LF / CR so saving can restore them
+│   ├── autosave.ts                # debounce + flush(explicit)
+│   ├── shortcuts.ts, accelerators.ts   # frontend key bindings and the key-name helpers
+│   ├── jsonc.ts                   # tokenizer for JSON with comments (settings file colours)
+│   ├── api.ts                     # typed wrappers around invoke() for every Rust command
+│   └── styles.css                 # CSS variables: dark, light, and the theme override
 └── src-tauri/
-    ├── Cargo.toml
-    ├── tauri.conf.json
-    ├── capabilities/default.json   # allow dialog plugin + core window events
+    ├── Cargo.toml, tauri.conf.json   # content-security policy and bundle targets live here
+    ├── capabilities/default.json     # window and dialog permissions
+    ├── icons/                        # icon.svg is the master; the rest is generated from it
     └── src/
-        ├── main.rs
-        ├── lib.rs           # builder, plugin registration, command registration
-        ├── config.rs        # load/save config.json
-        ├── notes.rs         # list/read/write/create/rename + filename logic
-        └── error.rs         # serializable error type
+        ├── main.rs, lib.rs        # builder, plugins, menu, command registration
+        ├── menu.rs                # the action table (menu, key bindings, shortcut help) and menu commands
+        ├── notes.rs               # draft files: list, read, write, create, rename, trash; filename logic
+        ├── config.rs              # config.json (the app's own state) and the one config folder
+        ├── settings.rs            # settings.json: the checker, defaults, the template
+        └── error.rs               # serializable error type
 ```
+
+The app's files live in `~/.config/draftwick/` (`config.json`, `settings.json`), decided in one place: `config::config_dir`.
 
 ---
 
-## 4. Rust command API (`src-tauri/src/notes.rs`, `config.rs`)
+## 4. Rust command API
 
-All commands return `Result<T, AppError>`, where `AppError` serializes to `{ message: string }`.
+*Brought up to date on 2026-10-27. The list of record is the `generate_handler!` macro in `src-tauri/src/lib.rs`.*
+
+All commands return `Result<T, AppError>`; `AppError` serialises to `{ kind, message }` (`kind: "missing"` is a file that no longer exists).
 
 ```rust
-get_config() -> Config                       // { notes_dir: Option<String> }
-set_notes_dir(path: String) -> Config         // validates it's a dir (creates if missing)
-default_notes_dir() -> String                 // <home>/Notes, created if missing
-list_notes() -> Vec<NoteMeta>                 // { path, name, modified_ms, ext } for .md/.txt, newest first
-read_note(path: String) -> String
-write_note(path: String, content: String) -> NoteMeta   // atomic: write to .tmp then rename
-create_note(content: String) -> NoteMeta      // generates "YYYY-MM-DD HH-mm.md" in notes_dir, collision-safe
-rename_note(path: String, new_stem: String) -> NoteMeta // keeps extension, rejects invalid chars and existing targets
+// config.rs: the app's own state
+get_config() -> Config                          // { notes_dir, sidebar_visible }; a missing draft directory reads as unset
+set_notes_dir(path) -> Config                   // creates it if missing
+default_notes_dir() -> String                   // ~/Drafts, created only when the user clicks "Use ~/Drafts instead"
+set_sidebar_visible(visible)
+
+// notes.rs: drafts (.md / .txt only; the settings file is the one exception)
+is_in_notes_dir(path) -> bool                   // canonicalized, so symlinks out of the folder count as outside
+list_notes() -> Vec<NoteMeta>                   // { path, name, modified_ms, ext }, newest first
+read_note(path) -> String
+write_note(path, content, create_if_missing) -> NoteMeta   // atomic (.tmp then rename); a missing file is `missing`
+create_note(content) -> NoteMeta                // "YYYY-MM-DD HH-mm.md", " (2)" on a clash
+rename_note(path, new_stem) -> NoteMeta         // keeps the extension, rejects bad characters and existing targets
+trash_note(path)                                // system trash; only a .md/.txt directly inside the draft directory
+
+// settings.rs
+get_settings() -> LoadedSettings                // { settings, problems, valid }
+check_settings(text) -> Vec<Diagnostic>         // the live underlines
+prepare_settings_file() -> String               // creates settings.json from the template if missing; returns its path
+
+// menu.rs
+get_actions() -> Vec<ActionInfo>                // the action table
+get_about() -> ...                              // the About dialog's text
+set_menu_enabled(enabled)                       // File items follow whether a draft directory is set
+set_menu_checked(id, checked)                   // the View > Show sidebar tick
 ```
 
-Crates: `serde`, `serde_json`, `chrono` (local time), `dirs` (home dir), `thiserror`.
+Crates: `tauri`, `tauri-plugin-dialog`, `serde`, `serde_json`, `chrono` (local time), `dirs`, `thiserror`, `trash`.
 
 **Filename logic must be a pure function** for unit testing:
 ```rust
@@ -180,13 +207,13 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 
 ### M3: Create + autosave
 - `create_note`, `write_note`, `autosave.ts` (debounced autosave, 5 s by default and configurable, see M9; flush on blur, `Ctrl+S`, `close-requested`).
-- The first keystroke in an unsaved note calls `create_note`, and later saves call `write_note`.
-- **Done when:** typing creates `2026-10-27 14-05.md` in the draft directory; a second note in the same minute becomes `2026-10-27 14-05 (2).md`; closing the window mid-typing loses nothing; opening the app without typing creates no file.
+- The first keystroke in an unsaved draft calls `create_note`, and later saves call `write_note`.
+- **Done when:** typing creates `2026-10-27 14-05.md` in the draft directory; a second draft in the same minute becomes `2026-10-27 14-05 (2).md`; closing the window mid-typing loses nothing; opening the app without typing creates no file.
 
 ### M4: Sidebar + open
 - `list_notes`, `read_note`, sidebar UI, `Ctrl+B`, `Ctrl+N`, `Ctrl+O` (dialog filter: `md`, `txt`), `Ctrl+W`, title-bar dirty marker.
 - Opening a `.txt` switches the editor to plain-text mode.
-- **Done when:** notes list newest-first, clicking switches files with no data loss, and external `.md`/`.txt` files open and save in place.
+- **Done when:** drafts list newest-first, clicking switches files with no data loss, and external `.md`/`.txt` files open and save in place.
 
 ### M5: Quick switcher, rename, settings
 - `Ctrl+P` overlay (simple subsequence fuzzy match, arrow keys + Enter, Esc closes), `Ctrl+Shift+R` rename, `Ctrl+,` change folder.
