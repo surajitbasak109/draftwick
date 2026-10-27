@@ -28,9 +28,20 @@ interface Current {
    * one, which only happens when the user saves explicitly, so it is not autosaved either.
    */
   mixedEol: boolean;
+  /** Whether the file on disk currently has any text. */
+  hasText: boolean;
 }
 
-const NEW_NOTE: Current = { path: null, name: "", ext: "md", managed: true, mixedEol: false };
+const NEW_NOTE: Current = {
+  path: null,
+  name: "",
+  ext: "md",
+  managed: true,
+  mixedEol: false,
+  hasText: false,
+};
+
+const EMPTY_REASON = "it is empty, which would erase the text in the saved file";
 
 /**
  * Why the current document is not autosaved, phrased to follow "because"; null when it is.
@@ -39,6 +50,8 @@ const NEW_NOTE: Current = { path: null, name: "", ext: "md", managed: true, mixe
 function autosaveOffReason(c: Current): string | null {
   if (!c.managed) return "it is outside your notes folder";
   if (c.mixedEol) return "it mixes line endings";
+  // Clearing a note must not wipe its file behind the user's back; only Ctrl+S may do that.
+  if (c.hasText && editor.isEmpty()) return EMPTY_REASON;
   return null;
 }
 
@@ -61,14 +74,32 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+// The autosave state last shown in the title, so we notice when typing changes it.
+let shownReason: string | null = null;
+let shownTitle = "";
+
 function updateTitle() {
+  shownReason = autosaveOffReason(current);
   const base = current.path ? current.name : "Untitled";
-  const note = autosaveOffReason(current) ? " (autosave off)" : "";
+  const note = shownReason ? " (autosave off)" : "";
   const title = `${autosave.dirty ? "• " : ""}${base}${note} — ${APP_NAME}`;
+  if (title === shownTitle) return;
+  shownTitle = title;
   document.title = title;
   getCurrentWindow()
     .setTitle(title)
     .catch(() => {});
+}
+
+/** Called after every edit: autosave can switch on or off as the text changes (e.g. cleared). */
+function onEdited() {
+  // Read this first: touch() can itself refresh the title (when the note turns dirty).
+  const before = shownReason;
+  autosave.touch();
+  updateTitle();
+  if (shownReason === EMPTY_REASON && before !== EMPTY_REASON) {
+    toast("Autosave is paused because the note is empty. Press Ctrl+S to save it that way.");
+  }
 }
 
 // ---------- editor, autosave, sidebar ----------
@@ -82,7 +113,7 @@ const autosave = createAutosave({
 });
 
 const editor = createEditor(document.querySelector<HTMLElement>("#editor")!, {
-  onChange: () => autosave.touch(),
+  onChange: onEdited,
   // Losing focus only saves what is allowed to autosave.
   onBlur: () => {
     if (autosaveOffReason(current) === null) void autosave.flush();
@@ -121,21 +152,28 @@ async function saveCurrent() {
     // Don't create empty files: wait until there is something to write.
     if (content === "") return;
     const meta = await api.createNote(content);
-    current = { path: meta.path, name: meta.name, ext: meta.ext, managed: true, mixedEol: false };
+    current = {
+      path: meta.path,
+      name: meta.name,
+      ext: meta.ext,
+      managed: true,
+      mixedEol: false,
+      hasText: true,
+    };
   } else {
     await api.writeNote(current.path, content);
-    // The file now uses a single line ending, so the mixed-endings caution no longer applies.
-    if (current.mixedEol) current = { ...current, mixedEol: false };
+    // The file now has a single line ending, so the mixed-endings caution no longer applies.
+    current = { ...current, mixedEol: false, hasText: content !== "" };
   }
   updateTitle();
   await refreshSidebar();
 }
 
-function describe(path: string, managed: boolean, mixedEol: boolean): Current {
+function describe(path: string, managed: boolean, mixedEol: boolean, hasText: boolean): Current {
   const name = path.split(/[\\/]/).pop() ?? path;
   const dot = name.lastIndexOf(".");
   const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : "md";
-  return { path, name, ext, managed, mixedEol };
+  return { path, name, ext, managed, mixedEol, hasText };
 }
 
 // ---------- actions ----------
@@ -183,7 +221,7 @@ async function openPath(path: string) {
     if (!(await settleCurrent())) return;
     const [text, managed] = await Promise.all([api.readNote(path), api.isInNotesDir(path)]);
     const { eol, mixed } = detectEol(text);
-    current = describe(path, managed, mixed);
+    current = describe(path, managed, mixed, text !== "");
     editor.setDoc(text, current.ext, eol);
     autosave.markClean();
     updateTitle();
@@ -235,7 +273,7 @@ async function renameCurrent(stem: string) {
   if (current.path === null) throw new Error("Nothing to rename yet");
   await autosave.flush();
   const meta = await api.renameNote(current.path, stem);
-  current = describe(meta.path, current.managed, current.mixedEol);
+  current = describe(meta.path, current.managed, current.mixedEol, current.hasText);
   updateTitle();
   await refreshSidebar();
 }

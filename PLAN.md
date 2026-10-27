@@ -26,6 +26,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 | Filename collision | Append ` (2)`, ` (3)`, … before `.md` | Two notes in the same minute must not overwrite each other |
 | Saving | **Autosave** 500 ms after the last keystroke, plus on blur/close, **only for notes inside the notes folder**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
 | Files outside the notes folder | **Never autosaved.** Saved only with `Ctrl+S`; leaving or closing with unsaved edits asks **Save / Don't Save / Cancel**. The title shows "(autosave off)" | Consent rule: don't write to a file the user opened from elsewhere unless they ask |
+| Emptied notes | **Autosave never replaces a file that has text with an empty document.** Clearing a note pauses autosave (title shows "(autosave off)", plus a toast); only `Ctrl+S` writes the empty note. Leaving or closing it asks Save / Don't Save / Cancel. Typing again resumes autosave | An accidental select-all + delete must not wipe the file |
 | Line endings | **Preserved exactly.** CRLF, LF or CR is detected when a file is opened and written back unchanged (CodeMirror itself normalizes to LF). A file that **mixes** endings is not autosaved; an explicit save converts every line to its most common ending | Opening and saving must never silently rewrite lines the user didn't touch |
 | Theme | Dark by default, follows the OS `prefers-color-scheme` | |
 

@@ -12,6 +12,8 @@ export interface EditorHandle {
   setDoc(text: string, ext: string, eol: Eol): void;
   /** The document text, with lines joined by the ending given to setDoc. */
   getDoc(): string;
+  /** True when the document has no text at all. */
+  isEmpty(): boolean;
   focus(): void;
 }
 
@@ -99,6 +101,7 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
       }
     },
     getDoc: () => view.state.doc.sliceString(0, view.state.doc.length, eol),
+    isEmpty: () => view.state.doc.length === 0,
     focus: () => view.focus(),
   };
 }
