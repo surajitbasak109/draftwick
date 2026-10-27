@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toCombo } from "./accelerators";
@@ -364,6 +364,50 @@ async function openWithDialog() {
   if (typeof picked === "string") await openPath(picked);
 }
 
+/**
+ * File > Save as…: asks where to save, writes the text there, and the open draft carries on as
+ * that file. The old file is left exactly as it was last saved. The system dialog asks before
+ * overwriting. Only .md and .txt are allowed; a name without one gets .md.
+ */
+async function saveAs() {
+  if (current.path !== null && current.path === settingsPath) {
+    toast("The settings file can't be saved under another name");
+    return;
+  }
+  try {
+    const config = await api.getConfig();
+    const defaultPath =
+      current.path ?? (config.notes_dir ? `${config.notes_dir}/Untitled.md` : undefined);
+    const picked = await save({
+      defaultPath,
+      filters: [{ name: "Drafts", extensions: ["md", "txt"] }],
+    });
+    if (!picked) return; // cancelled: nothing happens
+    const path = /\.(md|txt)$/i.test(picked) ? picked : `${picked}.md`;
+    if (path === current.path) {
+      await autosave.flush(true); // the same file: this is just Save
+      return;
+    }
+    const content = editor.getDoc();
+    const meta = await api.writeNote(path, content, true);
+    const managed = await api.isInNotesDir(meta.path);
+    const before = current.ext;
+    // Saving converts any mixed line endings to one, so the new file is uniform.
+    current = describe(meta.path, managed, false, content !== "");
+    if (current.ext !== before) {
+      // A different extension means a different language (Markdown or plain text).
+      editor.setDoc(content, current.ext, detectEol(content).eol);
+    }
+    autosave.markClean();
+    updateTitle();
+    sidebar.render(notes, current.path);
+    await refreshSidebar();
+    toast(`Saved as “${meta.name}”`);
+  } catch (e) {
+    toast(`Couldn't save: ${errorMessage(e)}`);
+  }
+}
+
 async function pickFolder(): Promise<string | null> {
   const picked = await open({
     directory: true,
@@ -506,6 +550,7 @@ const handlers: Record<string, () => void> = {
   new: () => void newNote(),
   open: () => void openWithDialog(),
   save: () => void autosave.flush(),
+  save_as: () => void saveAs(),
   close: () => void newNote(), // closes the note and shows a blank one; the window stays open
   // Closing the window goes through the normal close path, which asks about unsaved work.
   quit: () => void getCurrentWindow().close(),

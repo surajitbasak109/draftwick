@@ -70,6 +70,8 @@ pub const ACTIONS: &[Action] = &[
         true,
     ),
     Action::new("save", "Save", Some("CmdOrCtrl+S"), Some("File"), true),
+    // Asks where to save a copy; the open draft then continues as that file.
+    Action::new("save_as", "Save as…", Some("CmdOrCtrl+Shift+S"), Some("File"), true),
     // Closes the current note and shows a new blank one; it does not close the window.
     Action::new("close", "Close", Some("CmdOrCtrl+W"), Some("File"), true),
     // Quits through the window's normal close path, so unsaved work is still asked about. It
@@ -294,7 +296,7 @@ mod tests {
         // As specified by the user: File > Open, Save, Close. Help > About, Keyboard shortcuts.
         assert_eq!(
             menu_labels("File"),
-            ["New file", "Open", "Open/Set draft directory", "Save", "Close", "Quit"]
+            ["New file", "Open", "Open/Set draft directory", "Save", "Save as…", "Close", "Quit"]
         );
         assert_eq!(menu_labels("Edit"), ["Undo", "Redo"]);
         assert_eq!(menu_labels("View"), ["Show sidebar", "Toggle wrap", "Enter full screen"]);

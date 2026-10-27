@@ -39,7 +39,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 
 ## Menu items held back (see M7 in `.claude/PLAN.md` for the reasons)
 
-- [ ] **File > Save as…** (`Ctrl+Shift+S`). Medium: save dialog, `.md` or `.txt` only, the open draft switches to the new path, the old file is left alone.
+- [x] **File > Save as…** (`Ctrl+Shift+S`). Opens a save dialog (`.md` or `.txt`; a name with neither gets `.md`); the open draft continues as the new file and the old file is left as it was last saved; the new file autosaves only inside the draft directory; cancelling does nothing; the system dialog asks before overwriting; the settings file refuses. Checked by the user on 2026-10-27. Uses the `dialog:allow-save` permission. Known: choosing a different extension reloads the editor to switch the language, which clears undo history.
 - [x] **Edit > Undo, Redo.** A new Edit menu with click-only Undo and Redo (no accelerator, so `Ctrl+Z` and `Ctrl+Shift+Z` still go to whatever has focus). Checked by the user on 2026-10-27. Not done: a display-only shortcut hint beside the item.
 - [x] ~~Edit > Cut, Copy.~~ Dropped 2026-10-27 at the user's request: the web view may refuse clipboard access from a menu click, and Ctrl+X / Ctrl+C already work in the editor. Reopen it if wanted.
 - [ ] **Edit > Copy as HTML.** Needs a Markdown to HTML renderer, sanitising, and writing both HTML and plain text to the clipboard.
