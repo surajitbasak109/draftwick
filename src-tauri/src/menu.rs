@@ -83,6 +83,8 @@ pub const ACTIONS: &[Action] = &[
     // text box and apply them to the editor.
     Action::new("undo", "Undo", None, Some("Edit"), true),
     Action::new("redo", "Redo", None, Some("Edit"), true),
+    // Copies the selection (or the whole draft) as HTML plus the Markdown as plain text.
+    Action::new("copy_html", "Copy as HTML", None, Some("Edit"), true),
     // ---- View ----
     // Shows a tick while the sidebar is visible; the frontend keeps the tick in step.
     Action::new("toggle_sidebar", "Show sidebar", Some("CmdOrCtrl+B"), Some("View"), true).ticked(),
@@ -298,7 +300,7 @@ mod tests {
             menu_labels("File"),
             ["New file", "Open", "Open/Set draft directory", "Save", "Save as…", "Close", "Quit"]
         );
-        assert_eq!(menu_labels("Edit"), ["Undo", "Redo"]);
+        assert_eq!(menu_labels("Edit"), ["Undo", "Redo", "Copy as HTML"]);
         assert_eq!(menu_labels("View"), ["Show sidebar", "Toggle wrap", "Enter full screen"]);
         assert_eq!(menu_labels("Settings"), ["Open settings file", "Reload settings"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);

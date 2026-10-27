@@ -1,3 +1,4 @@
+import { writeHtml } from "@tauri-apps/plugin-clipboard-manager";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -8,6 +9,7 @@ import { createAutosave } from "./autosave";
 import { createChoicePrompt, type Choice, type ChoiceOptions } from "./choice";
 import { createEditor } from "./editor";
 import { detectEol, eolName } from "./lineEndings";
+import { markdownToHtml } from "./markdownHtml";
 import { createRenamePrompt } from "./rename";
 import { createShortcutsHelp } from "./shortcutsHelp";
 import { createSidebar } from "./sidebar";
@@ -365,6 +367,31 @@ async function openWithDialog() {
 }
 
 /**
+ * Edit > Copy as HTML: puts the selection (or, with nothing selected, the whole draft) on the
+ * clipboard as HTML, with the Markdown as the plain-text version, so pasting into an email or a
+ * document keeps the formatting and pasting into a plain field gives the Markdown.
+ */
+async function copyAsHtml() {
+  if (current.ext !== "md" || (current.path !== null && current.path === settingsPath)) {
+    toast("Copy as HTML works on Markdown (.md) drafts");
+    return;
+  }
+  const selected = editor.getSelection();
+  const source = (selected !== "" ? selected : editor.getDoc()).replace(/\r\n?/g, "\n");
+  if (source.trim() === "") {
+    toast("Nothing to copy yet");
+    return;
+  }
+  try {
+    await writeHtml(markdownToHtml(source), source);
+    toast(selected !== "" ? "Copied the selection as HTML" : "Copied the draft as HTML");
+  } catch (e) {
+    toast(`Couldn't copy: ${errorMessage(e)}`);
+  }
+  editor.focus();
+}
+
+/**
  * File > Save as…: asks where to save, writes the text there, and the open draft carries on as
  * that file. The old file is left exactly as it was last saved. The system dialog asks before
  * overwriting. Only .md and .txt are allowed; a name without one gets .md.
@@ -570,6 +597,7 @@ const handlers: Record<string, () => void> = {
   fullscreen: () => void toggleFullscreen(),
   undo: () => editor.undo(),
   redo: () => editor.redo(),
+  copy_html: () => void copyAsHtml(),
 };
 
 /** F11 and View > Enter full screen. The menu text follows what the window really did. */

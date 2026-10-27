@@ -67,6 +67,8 @@ export interface EditorHandle {
   setDoc(text: string, ext: string, eol: Eol): void;
   /** The document text, with lines joined by the ending given to setDoc. */
   getDoc(): string;
+  /** The selected text (several selections joined by a new line), or "" when nothing is selected. */
+  getSelection(): string;
   /** True when the document has no text at all. */
   isEmpty(): boolean;
   focus(): void;
@@ -240,6 +242,11 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
       }
     },
     getDoc: () => view.state.doc.sliceString(0, view.state.doc.length, eol),
+    getSelection: () =>
+      view.state.selection.ranges
+        .filter((r) => !r.empty)
+        .map((r) => view.state.sliceDoc(r.from, r.to))
+        .join("\n"),
     isEmpty: () => view.state.doc.length === 0,
     focus: () => view.focus(),
     undo() {

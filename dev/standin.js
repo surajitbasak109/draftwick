@@ -10,6 +10,7 @@
  * Handy in the browser console:
  *   __standin.emit("menu-action", "save_as")  pretend a menu item was clicked
  *   __standin.dialog = "/standin/Drafts/x.md" the path the next open/save dialog returns
+ *   __standin.clipboard                       what Edit > Copy as HTML put there: { html, text }
  *   __standin.files                           the files, as { path: { text, modified } }
  * Open the page with ?welcome to start with no draft directory (the welcome screen).
  */
@@ -35,6 +36,7 @@
     menu: {},
     fullscreen: false,
     dialog: null,
+    clipboard: null,
   };
 
   const fail = (kind, message) => Promise.reject({ kind, message });
@@ -105,6 +107,7 @@
     trash_note: ({ path }) => { delete files[path]; },
 
     // ---- plugins ----
+    "plugin:clipboard-manager|write_html": ({ html, altText }) => { state.clipboard = { html, text: altText }; },
     "plugin:dialog|open": () => { const d = state.dialog; state.dialog = null; return d; },
     "plugin:dialog|save": () => { const d = state.dialog; state.dialog = null; return d; },
     "plugin:event|listen": ({ event, handler }) => {
