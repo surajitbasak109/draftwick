@@ -59,7 +59,7 @@ const EMPTY_REASON = "it is empty, which would erase the text in the saved file"
  */
 function autosaveOffReason(c: Current): string | null {
   if (c.missing) return "its file was deleted or moved";
-  if (!c.managed) return "it is outside your notes folder";
+  if (!c.managed) return "it is outside your draft directory";
   if (c.mixedEol) return "it mixes line endings";
   // Clearing a note must not wipe its file behind the user's back; only Ctrl+S may do that.
   if (c.hasText && editor.isEmpty()) return EMPTY_REASON;
@@ -109,7 +109,7 @@ function onEdited() {
   autosave.touch();
   updateTitle();
   if (shownReason === EMPTY_REASON && before !== EMPTY_REASON) {
-    toast("Autosave is paused because the note is empty. Press Ctrl+S to save it that way.");
+    toast("Autosave is paused because the draft is empty. Press Ctrl+S to save it that way.");
   }
 }
 
@@ -164,7 +164,7 @@ async function refreshSidebar() {
   try {
     notes = await api.listNotes();
   } catch (e) {
-    toast(`Couldn't list notes: ${errorMessage(e)}`);
+    toast(`Couldn't list drafts: ${errorMessage(e)}`);
     notes = [];
   }
   sidebar.render(notes, current.path);
@@ -313,7 +313,7 @@ async function openPath(path: string) {
       toast(`Autosave is off for this file because ${reason}. Press Ctrl+S to save.${convert}`);
     }
   } catch (e) {
-    toast(`Couldn't open note: ${errorMessage(e)}`);
+    toast(`Couldn't open draft: ${errorMessage(e)}`);
   }
 }
 
@@ -321,7 +321,7 @@ async function openWithDialog() {
   const picked = await open({
     multiple: false,
     directory: false,
-    filters: [{ name: "Notes", extensions: ["md", "txt"] }],
+    filters: [{ name: "Drafts", extensions: ["md", "txt"] }],
   });
   if (typeof picked === "string") await openPath(picked);
 }
@@ -330,7 +330,7 @@ async function pickFolder(): Promise<string | null> {
   const picked = await open({
     directory: true,
     multiple: false,
-    title: "Choose a folder for your notes",
+    title: "Choose a directory for your drafts",
   });
   return typeof picked === "string" ? picked : null;
 }
@@ -341,11 +341,11 @@ async function changeNotesDir() {
     if (!picked) return;
     if (!(await settleCurrent())) return;
     await api.setNotesDir(picked);
-    toast(`Notes folder: ${picked}`);
+    toast(`Draft directory: ${picked}`);
     await newNote();
     await refreshSidebar();
   } catch (e) {
-    toast(`Couldn't change folder: ${errorMessage(e)}`);
+    toast(`Couldn't change the draft directory: ${errorMessage(e)}`);
   }
 }
 
@@ -360,7 +360,7 @@ async function renameCurrent(stem: string) {
 
 function startRename() {
   if (current.path === null) {
-    toast("Type something first; the note is created on the first keystroke");
+    toast("Type something first; the draft is created on the first keystroke");
     return;
   }
   // Renaming flushes pending edits, which must not happen silently for an outside file.
@@ -397,7 +397,7 @@ function runWelcome(): Promise<void> {
         welcome.hidden = true;
         resolve();
       } catch (e) {
-        error.textContent = `Couldn't set the notes folder: ${errorMessage(e)}`;
+        error.textContent = `Couldn't set the draft directory: ${errorMessage(e)}`;
         error.hidden = false;
       } finally {
         choose.disabled = useDefault.disabled = false;
@@ -420,8 +420,10 @@ const handlers: Record<string, () => void> = {
   open: () => void openWithDialog(),
   save: () => void autosave.flush(),
   close: () => void newNote(), // closes the note and shows a blank one; the window stays open
+  // Closing the window goes through the normal close path, which asks about unsaved work.
+  quit: () => void getCurrentWindow().close(),
   quick_switcher: () => switcher.open(notes),
-  toggle_sidebar: () => sidebar.toggle(),
+  toggle_sidebar: () => toggleSidebar(),
   change_folder: () => void changeNotesDir(),
   rename: () => startRename(),
   about: () =>
@@ -431,6 +433,23 @@ const handlers: Record<string, () => void> = {
       .catch((e) => toast(`Couldn't open About: ${errorMessage(e)}`)),
   shortcuts: () => shortcutsHelp.open(actionTable),
 };
+
+/** Keeps the tick on View > Show sidebar in step with the sidebar. */
+function syncSidebarTick() {
+  void api
+    .setMenuChecked("toggle_sidebar", sidebar.isVisible())
+    .catch((e) => toast(`Couldn't update the menu: ${errorMessage(e)}`));
+}
+
+/** Shows or hides the sidebar, and remembers the choice for the next launch. */
+function toggleSidebar() {
+  sidebar.toggle();
+  syncSidebarTick();
+  void api
+    .setSidebarVisible(sidebar.isVisible())
+    .catch((e) => toast(`Couldn't remember the sidebar choice: ${errorMessage(e)}`));
+  editor.focus();
+}
 
 /**
  * Runs an action by id. Ignored while a prompt waits for an answer, and, for actions that need
@@ -500,8 +519,11 @@ async function boot() {
   }
 
   let configured = false;
+  let savedSidebar: boolean | null = null;
   try {
-    configured = Boolean((await api.getConfig()).notes_dir);
+    const config = await api.getConfig();
+    configured = Boolean(config.notes_dir);
+    savedSidebar = config.sidebar_visible;
   } catch (e) {
     toast(`Couldn't read settings: ${errorMessage(e)}`);
   }
@@ -511,6 +533,9 @@ async function boot() {
   ready = true;
   // The menu items that need a notes folder start greyed out; switch them on now there is one.
   await api.setMenuEnabled(true).catch((e) => toast(`Couldn't enable the menu: ${errorMessage(e)}`));
+  // Restore the sidebar as the user left it. Nothing is written back: this is not a new choice.
+  if (savedSidebar === false && sidebar.isVisible()) sidebar.toggle();
+  syncSidebarTick();
   await refreshSidebar();
   await newNote();
 }

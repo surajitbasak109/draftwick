@@ -9,7 +9,7 @@
 //! - an action without one is bound by the frontend, until it is given a menu item.
 
 use serde::Serialize;
-use tauri::menu::{IsMenuItem, Menu, MenuEvent, MenuItem, MenuItemKind, Submenu};
+use tauri::menu::{CheckMenuItem, IsMenuItem, Menu, MenuEvent, MenuItem, MenuItemKind, Submenu};
 use tauri::{AppHandle, Emitter, Runtime};
 
 use crate::error::{AppError, AppResult};
@@ -26,86 +26,67 @@ pub struct Action {
     pub menu: Option<&'static str>,
     /// Needs a notes folder to exist, so it is greyed out on the welcome screen.
     pub needs_folder: bool,
+    /// `Some(initially_checked)` makes this a check item (a menu entry with a tick).
+    pub check: Option<bool>,
+}
+
+impl Action {
+    const fn new(
+        id: &'static str,
+        label: &'static str,
+        accelerator: Option<&'static str>,
+        menu: Option<&'static str>,
+        needs_folder: bool,
+    ) -> Self {
+        Action {
+            id,
+            label,
+            accelerator,
+            menu,
+            needs_folder,
+            check: None,
+        }
+    }
+
+    /// Turns this into a check item that starts ticked.
+    const fn ticked(mut self) -> Self {
+        self.check = Some(true);
+        self
+    }
 }
 
 /// Top-level menus, in display order.
-const MENUS: [&str; 2] = ["File", "Help"];
+const MENUS: [&str; 3] = ["File", "View", "Help"];
 
 pub const ACTIONS: &[Action] = &[
-    Action {
-        id: "new",
-        label: "New note",
-        accelerator: Some("CmdOrCtrl+N"),
-        menu: None,
-        needs_folder: true,
-    },
-    Action {
-        id: "open",
-        label: "Open",
-        accelerator: Some("CmdOrCtrl+O"),
-        menu: Some("File"),
-        needs_folder: true,
-    },
-    Action {
-        id: "save",
-        label: "Save",
-        accelerator: Some("CmdOrCtrl+S"),
-        menu: Some("File"),
-        needs_folder: true,
-    },
+    // ---- File ----
+    Action::new("new", "New file", Some("CmdOrCtrl+N"), Some("File"), true),
+    Action::new("open", "Open", Some("CmdOrCtrl+O"), Some("File"), true),
+    Action::new(
+        "change_folder",
+        "Open/Set draft directory",
+        Some("CmdOrCtrl+,"),
+        Some("File"),
+        true,
+    ),
+    Action::new("save", "Save", Some("CmdOrCtrl+S"), Some("File"), true),
     // Closes the current note and shows a new blank one; it does not close the window.
-    Action {
-        id: "close",
-        label: "Close",
-        accelerator: Some("CmdOrCtrl+W"),
-        menu: Some("File"),
-        needs_folder: true,
-    },
-    Action {
-        id: "quick_switcher",
-        label: "Go to note",
-        accelerator: Some("CmdOrCtrl+P"),
-        menu: None,
-        needs_folder: true,
-    },
-    Action {
-        id: "toggle_sidebar",
-        label: "Toggle sidebar",
-        accelerator: Some("CmdOrCtrl+B"),
-        menu: None,
-        needs_folder: true,
-    },
-    Action {
-        id: "change_folder",
-        label: "Change notes folder",
-        accelerator: Some("CmdOrCtrl+,"),
-        menu: None,
-        needs_folder: true,
-    },
-    Action {
-        id: "rename",
-        label: "Rename note",
-        accelerator: Some("CmdOrCtrl+Shift+R"),
-        menu: None,
-        needs_folder: true,
-    },
+    Action::new("close", "Close", Some("CmdOrCtrl+W"), Some("File"), true),
+    // Quits through the window's normal close path, so unsaved work is still asked about. It
+    // works on the welcome screen too, where there is nothing to save.
+    Action::new("quit", "Quit", Some("CmdOrCtrl+Q"), Some("File"), false),
+    // ---- View ----
+    // Shows a tick while the sidebar is visible; the frontend keeps the tick in step.
+    Action::new("toggle_sidebar", "Show sidebar", Some("CmdOrCtrl+B"), Some("View"), true).ticked(),
+    // ---- Keyboard shortcut only, for now ----
+    Action::new("quick_switcher", "Go to draft", Some("CmdOrCtrl+P"), None, true),
+    Action::new("rename", "Rename draft", Some("CmdOrCtrl+Shift+R"), None, true),
+    // ---- Help ----
     // Help is harmless without a notes folder, so it stays available on the welcome screen.
     // About is an in-app dialog rather than the native one: the native GTK dialog has no parent
     // window, so the window manager places it wherever it likes instead of centring it.
-    Action {
-        id: "about",
-        label: "About",
-        accelerator: None,
-        menu: Some("Help"),
-        needs_folder: false,
-    },
-    Action {
-        id: "shortcuts",
-        label: "Keyboard shortcuts",
-        accelerator: None,
-        menu: Some("Help"),
-        needs_folder: false,
-    },
+    Action::new("about", "About", None, Some("Help"), false),
+    Action::new("shortcuts", "Keyboard shortcuts", None, Some("Help"), false),
 ];
 
 fn tauri_error(e: tauri::Error) -> AppError {
@@ -117,13 +98,23 @@ fn tauri_error(e: tauri::Error) -> AppError {
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let mut menus: Vec<Submenu<R>> = Vec::new();
     for name in MENUS {
-        let items = ACTIONS
-            .iter()
-            .filter(|a| a.menu == Some(name))
-            .map(|a| MenuItem::with_id(app, a.id, a.label, !a.needs_folder, a.accelerator))
-            .collect::<tauri::Result<Vec<_>>>()?;
+        let mut items: Vec<Box<dyn IsMenuItem<R>>> = Vec::new();
+        for a in ACTIONS.iter().filter(|a| a.menu == Some(name)) {
+            let enabled = !a.needs_folder;
+            items.push(match a.check {
+                Some(checked) => Box::new(CheckMenuItem::with_id(
+                    app,
+                    a.id,
+                    a.label,
+                    enabled,
+                    checked,
+                    a.accelerator,
+                )?),
+                None => Box::new(MenuItem::with_id(app, a.id, a.label, enabled, a.accelerator)?),
+            });
+        }
 
-        let refs: Vec<&dyn IsMenuItem<R>> = items.iter().map(|i| i as &dyn IsMenuItem<R>).collect();
+        let refs: Vec<&dyn IsMenuItem<R>> = items.iter().map(|i| i.as_ref()).collect();
         menus.push(Submenu::with_items(app, name, true, &refs)?);
     }
 
@@ -198,9 +189,33 @@ pub fn set_menu_enabled(app: AppHandle, enabled: bool) -> AppResult<()> {
             continue;
         };
         for action in ACTIONS.iter().filter(|a| a.menu.is_some() && a.needs_folder) {
-            if let Some(MenuItemKind::MenuItem(item)) = submenu.get(action.id) {
-                item.set_enabled(enabled).map_err(tauri_error)?;
+            match submenu.get(action.id) {
+                Some(MenuItemKind::MenuItem(item)) => {
+                    item.set_enabled(enabled).map_err(tauri_error)?;
+                }
+                Some(MenuItemKind::Check(item)) => {
+                    item.set_enabled(enabled).map_err(tauri_error)?;
+                }
+                _ => {}
             }
+        }
+    }
+    Ok(())
+}
+
+/// Sets the tick on a check item, e.g. "Show sidebar". The frontend calls this after anything that
+/// changes the state, including the keyboard shortcut, so the tick always matches reality.
+#[tauri::command]
+pub fn set_menu_checked(app: AppHandle, id: String, checked: bool) -> AppResult<()> {
+    let Some(menu) = app.menu() else {
+        return Ok(());
+    };
+    for top in menu.items().map_err(tauri_error)? {
+        let MenuItemKind::Submenu(submenu) = top else {
+            continue;
+        };
+        if let Some(MenuItemKind::Check(item)) = submenu.get(id.as_str()) {
+            item.set_checked(checked).map_err(tauri_error)?;
         }
     }
     Ok(())
@@ -244,7 +259,11 @@ mod tests {
     #[test]
     fn menu_contents_match_the_spec() {
         // As specified by the user: File > Open, Save, Close. Help > About, Keyboard shortcuts.
-        assert_eq!(menu_labels("File"), ["Open", "Save", "Close"]);
+        assert_eq!(
+            menu_labels("File"),
+            ["New file", "Open", "Open/Set draft directory", "Save", "Close", "Quit"]
+        );
+        assert_eq!(menu_labels("View"), ["Show sidebar"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
     }
 
@@ -275,9 +294,18 @@ mod tests {
     }
 
     #[test]
-    fn only_help_stays_enabled_without_a_notes_folder() {
+    fn only_help_and_quit_stay_enabled_without_a_notes_folder() {
         for action in ACTIONS {
-            assert_eq!(!action.needs_folder, action.menu == Some("Help"), "{}", action.id);
+            let stays_enabled = action.menu == Some("Help") || action.id == "quit";
+            assert_eq!(!action.needs_folder, stays_enabled, "{}", action.id);
+        }
+    }
+
+    #[test]
+    fn only_the_sidebar_item_is_a_check_item() {
+        for action in ACTIONS {
+            let expected = (action.id == "toggle_sidebar").then_some(true);
+            assert_eq!(action.check, expected, "{}", action.id);
         }
     }
 }

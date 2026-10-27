@@ -3,6 +3,7 @@ import type { NoteMeta } from "./api";
 export interface Sidebar {
   render(notes: NoteMeta[], activePath: string | null): void;
   toggle(): void;
+  isVisible(): boolean;
 }
 
 export function createSidebar(
@@ -27,5 +28,6 @@ export function createSidebar(
     toggle() {
       app.classList.toggle("sidebar-hidden");
     },
+    isVisible: () => !app.classList.contains("sidebar-hidden"),
   };
 }

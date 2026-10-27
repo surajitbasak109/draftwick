@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export interface Config {
+  /** The draft directory (called notes_dir internally). */
   notes_dir: string | null;
+  /** Whether the sidebar was left visible; null until the user first toggles it. */
+  sidebar_visible: boolean | null;
 }
 
 export interface NoteMeta {
@@ -58,9 +61,14 @@ export interface AboutInfo {
 export const getAbout = () => call<AboutInfo>("get_about");
 /** Greys the menu items that need a notes folder in or out. */
 export const setMenuEnabled = (enabled: boolean) => call<void>("set_menu_enabled", { enabled });
+/** Sets the tick on a check item in the menu, e.g. "toggle_sidebar". */
+export const setMenuChecked = (id: string, checked: boolean) =>
+  call<void>("set_menu_checked", { id, checked });
 export const getConfig = () => call<Config>("get_config");
 export const setNotesDir = (path: string) => call<Config>("set_notes_dir", { path });
 export const defaultNotesDir = () => call<string>("default_notes_dir");
+export const setSidebarVisible = (visible: boolean) =>
+  call<void>("set_sidebar_visible", { visible });
 export const isInNotesDir = (path: string) => call<boolean>("is_in_notes_dir", { path });
 export const listNotes = () => call<NoteMeta[]>("list_notes");
 export const readNote = (path: string) => call<string>("read_note", { path });

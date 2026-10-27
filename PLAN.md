@@ -17,15 +17,15 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 | Shell | **Tauri 2** (Rust) | About 10 MB binary, fast startup, native dialogs |
 | Frontend | **TypeScript + Vite, vanilla (no React/Vue)** | Less overhead, faster startup, one less dependency |
 | Editor | **CodeMirror 6** + `@codemirror/lang-markdown` | The best web editor core; handles typical note sizes instantly |
-| File I/O | **Custom Rust commands** (not `tauri-plugin-fs` from JS) | The notes folder is picked at runtime; Rust commands avoid fs-scope config pain and keep naming logic testable |
+| File I/O | **Custom Rust commands** (not `tauri-plugin-fs` from JS) | The draft directory is picked at runtime; Rust commands avoid fs-scope config pain and keep naming logic testable |
 | Folder picker | `tauri-plugin-dialog` | Native folder dialog |
 | Config storage | JSON file in `app_config_dir()/config.json`, read/written by Rust | No extra plugin |
 | Consent rule | **Nothing happens without an explicit user action**: no system dialog on launch, no folder created unless the user asks | The user must never be surprised by a prompt or a silent change |
-| Folder choice | Welcome screen with **"Choose notes folder…"** (primary) and **"Use ~/Notes instead"** (secondary link); `~/Notes` is created only when that link is clicked | Replaces the earlier auto-dialog + silent `~/Notes` fallback |
+| Folder choice | Welcome screen with **"Choose draft directory…"** (primary) and **"Use ~/Drafts instead"** (secondary link); `~/Drafts` is created only when that link is clicked | Replaces the earlier auto-dialog + silent `~/Drafts` fallback |
 | New-note filename | **`YYYY-MM-DD HH-mm.md`** (local time), e.g. `2026-10-27 14-05.md` | `:` is illegal on Windows and shows oddly on macOS |
 | Filename collision | Append ` (2)`, ` (3)`, … before `.md` | Two notes in the same minute must not overwrite each other |
-| Saving | **Autosave** 500 ms after the last keystroke, plus on blur/close, **only for notes inside the notes folder**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
-| Files outside the notes folder | **Never autosaved.** Saved only with `Ctrl+S`; leaving or closing with unsaved edits asks **Save / Don't Save / Cancel**. The title shows "(autosave off)" | Consent rule: don't write to a file the user opened from elsewhere unless they ask |
+| Saving | **Autosave** 500 ms after the last keystroke, plus on blur/close, **only for notes inside the draft directory**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
+| Files outside the draft directory | **Never autosaved.** Saved only with `Ctrl+S`; leaving or closing with unsaved edits asks **Save / Don't Save / Cancel**. The title shows "(autosave off)" | Consent rule: don't write to a file the user opened from elsewhere unless they ask |
 | Deleted or moved files | **A file that disappears while it is open is never silently recreated.** Saving asks **Save again / Close without saving / Keep editing**; "Keep editing" is the focused button because the prompt can appear mid-typing, so a stray Enter is harmless. After Keep editing, autosave stays off until the user presses `Ctrl+S`, which recreates the file. Rust's `write_note` takes `create_if_missing` and reports `kind: "missing"` | A note the user deleted should stay deleted unless they say otherwise |
 | Implicit vs explicit saves | Saves started by the app (typing timer, blur, leaving a note) re-check at run time that autosave is still allowed; only `Ctrl+S` or answering a prompt is an explicit save | A save waiting in the queue must not act on an outdated situation |
 | Emptied notes | **Autosave never replaces a file that has text with an empty document.** Clearing a note pauses autosave (title shows "(autosave off)", plus a toast); only `Ctrl+S` writes the empty note. Leaving or closing it asks Save / Don't Save / Cancel. Typing again resumes autosave | An accidental select-all + delete must not wipe the file |
@@ -38,8 +38,8 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 
 ### First launch
 1. If `config.json` has no `notesDir`, show a **welcome screen** instead of the editor. **No system dialog opens by itself.** Keyboard shortcuts do nothing while it is showing.
-2. **"Choose notes folder…"** opens the native folder picker (titled "Choose a folder for your notes"). If a folder is chosen, save it as `notesDir` and open the editor. If the picker is cancelled, the user simply stays on the welcome screen; nothing is saved or created.
-3. **"Use ~/Notes instead"** creates `<home>/Notes` if missing, saves it as `notesDir`, and opens the editor. This is the only path that creates a folder, and only on click.
+2. **"Choose draft directory…"** opens the native folder picker (titled "Choose a folder for your notes"). If a folder is chosen, save it as `notesDir` and open the editor. If the picker is cancelled, the user simply stays on the welcome screen; nothing is saved or created.
+3. **"Use ~/Drafts instead"** creates `<home>/Notes` if missing, saves it as `notesDir`, and opens the editor. This is the only path that creates a folder, and only on click.
 
 ### Every launch
 - Load `notesDir`. If it no longer exists, show the welcome screen again.
@@ -47,6 +47,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 - The filename is fixed at the moment the file is first written (timestamp of first keystroke).
 
 ### Sidebar (left, collapsible with `Ctrl+B`)
+- A visible show/hide control, and remembering the choice, are planned in M8.
 - Lists `.md` and `.txt` files in `notesDir` (not recursive), **newest modified first**.
 - Click to open. The active file is highlighted.
 - Refresh after every create/save. Don't poll and don't use a file watcher in v1.
@@ -63,14 +64,15 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 | `Ctrl+O` | Open any `.md`/`.txt` file via native file dialog (may be outside `notesDir`; outside files are not autosaved, see Saving) |
 | `Ctrl+S` | Save now |
 | `Ctrl+P` | Quick switcher: fuzzy filter over sidebar files, Enter to open |
-| `Ctrl+B` | Toggle sidebar |
-| `Ctrl+,` | Settings: change notes folder (folder picker again) |
+| `Ctrl+B` | Toggle sidebar (View → Show sidebar, with a tick) |
+| `Ctrl+,` | Settings: change draft directory (folder picker again) |
 | `Ctrl+Shift+R` | Rename current file (inline input; keep the extension; reject `/ \ : * ? " < > \|`) |
 | `Ctrl+W` | Close current note (save first) → new empty note |
+| `Ctrl+Q` | Quit: closes the window through the normal close path, so unsaved work is still asked about |
 
 ### Closing the app
-- Notes inside the notes folder: flush the pending autosave before the window closes (handle the Tauri `close-requested` event), with no dialog.
-- A file from outside the notes folder with unsaved edits: keep the window open and ask **Save / Don't Save / Cancel**. Cancel keeps the window open; Save that fails also keeps it open.
+- Notes inside the draft directory: flush the pending autosave before the window closes (handle the Tauri `close-requested` event), with no dialog.
+- A file from outside the draft directory with unsaved edits: keep the window open and ask **Save / Don't Save / Cancel**. Cancel keeps the window open; Save that fails also keeps it open.
 - Whether a file is "inside" is decided in Rust (`is_in_notes_dir`): both paths are canonicalized, so symlinks pointing out of the folder count as outside.
 
 ---
@@ -152,12 +154,12 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 
 ### M2: Config + first-launch flow
 - `config.rs`, `get_config`, `set_notes_dir`, `default_notes_dir`, plus the welcome screen with its two buttons.
-- **Done when:** deleting `config.json` and relaunching shows the welcome screen and opens **no** dialog; "Choose notes folder…" opens the picker and cancelling it leaves the welcome screen up; "Use ~/Notes instead" creates `~/Notes` and opens the editor; relaunching doesn't show the welcome screen again.
+- **Done when:** deleting `config.json` and relaunching shows the welcome screen and opens **no** dialog; "Choose draft directory…" opens the picker and cancelling it leaves the welcome screen up; "Use ~/Drafts instead" creates `~/Drafts` and opens the editor; relaunching doesn't show the welcome screen again.
 
 ### M3: Create + autosave
 - `create_note`, `write_note`, `autosave.ts` (500 ms debounce, flush on blur, `Ctrl+S`, `close-requested`).
 - The first keystroke in an unsaved note calls `create_note`, and later saves call `write_note`.
-- **Done when:** typing creates `2026-10-27 14-05.md` in the notes folder; a second note in the same minute becomes `2026-10-27 14-05 (2).md`; closing the window mid-typing loses nothing; opening the app without typing creates no file.
+- **Done when:** typing creates `2026-10-27 14-05.md` in the draft directory; a second note in the same minute becomes `2026-10-27 14-05 (2).md`; closing the window mid-typing loses nothing; opening the app without typing creates no file.
 
 ### M4: Sidebar + open
 - `list_notes`, `read_note`, sidebar UI, `Ctrl+B`, `Ctrl+N`, `Ctrl+O` (dialog filter: `md`, `txt`), `Ctrl+W`, title-bar dirty marker.
@@ -174,61 +176,128 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 - **Done when:** the `.deb` installs on Ubuntu, Draftwick appears in the app launcher, and launches.
 
 ### M7: Menubar (built; needs a check in the real window, see below)
-Add a menubar. **The menus and items below were specified by the user** and are requirements:
+Add a menubar. **The menu below is the user's plan** (their wording; File/Help items first given earlier, the rest added later):
 
-- **File**
-  - Open
-  - Save
-  - Close
-- **Help**
-  - About
-  - Keyboard shortcuts
-- **…** (the user will add more menus and items)
+- **File:** New file · Open / Set draft directory · Save · Save as… (`Ctrl+Shift+S`) · Close · Quit (`Ctrl+Q`)
+- **Edit:** Undo · Redo · Cut · Copy · Copy as HTML
+- **View:** Show sidebar (conditional) · Toggle wrap · Enter full screen (`F11`)
+- **Settings:** see M9
+- **Help:** About · Keyboard shortcuts
 
-How the specified items map onto what already exists (each is just another way to trigger an existing action, so no new behavior is invented):
+Settled with the user: "Open/Set draft directory" is **one item**, and that is its name (it is the existing "change the draft directory" action). **Open** (a file) is a separate item, from the earlier File list. "Show sidebar (conditional)" is **one item with a tick** that is ticked while the sidebar is visible.
 
-| Menu item | Does | Existing shortcut |
-|---|---|---|
-| File → Open | Open any `.md`/`.txt` file via the file dialog | `Ctrl+O` |
-| File → Save | Explicit save (the only way to save a file outside the notes folder, an emptied note, or a note whose file was deleted) | `Ctrl+S` |
-| File → Close | Close the current note and show a new blank one, asking Save / Don't Save / Cancel first where the usual rules require it | `Ctrl+W` |
-| Help → About | Show the app name, version and a one-line description in a centred in-app dialog | none |
-| Help → Keyboard shortcuts | Show a list of every shortcut | none |
+**Status of every item.** Built in the first batch, because they were already working as shortcuts or are tiny; held for later, with the reason, because each needs a design decision or a check in the real window that I can't do from here.
+
+| Menu | Item | Shortcut | Status | Notes |
+|---|---|---|---|---|
+| File | New file | `Ctrl+N` | **Built** | Same action as before, now in the menu |
+| File | Open | `Ctrl+O` | **Built** | |
+| File | Open/Set draft directory | `Ctrl+,` | **Built** | The old "change draft directory" action, now with the user's name for it |
+| File | Save | `Ctrl+S` | **Built** | Confirmed working in the real window |
+| File | Save as… | `Ctrl+Shift+S` | Held, medium | See "Save as" below |
+| File | Close | `Ctrl+W` | **Built** | Closes the note, not the window |
+| File | Quit | `Ctrl+Q` | **Built** | Closes the window through the normal close path, so unsaved work is still asked about; also works on the welcome screen |
+| Edit | Undo, Redo, Cut, Copy | | Held, needs design | See "Edit menu" below |
+| Edit | Copy as HTML | | Held, bigger | Needs a Markdown renderer |
+| View | Show sidebar | `Ctrl+B` | **Built** | A tick item; the tick follows the real state, including after `Ctrl+B` |
+| View | Toggle wrap | | Held, easy | Decide together with the "word wrap column" setting (M9) |
+| View | Enter full screen | `F11` | Held, easy | Needs keys without `Ctrl` in the shortcut code, a label that flips to "Exit full screen", and a check on GNOME |
+| Settings | (menu) | | Held | See M9 |
+| Help | About | | **Built** | In-app dialog, centred |
+| Help | Keyboard shortcuts | | **Built** | Generated from the action table |
+
+**Save as** (held): needs the `dialog:allow-save` permission and a save dialog; the name must end in `.md` or `.txt` (append `.md` if missing); after saving, the open note switches to the new path and the old file is left alone; whether the new location is inside the draft directory decides if it autosaves; the sidebar refreshes. Overwrite confirmation comes from the system dialog. Consent rule: it only happens when the user chooses it.
+
+**Edit menu** (held), three separate problems:
+1. **Accelerators would hijack keys.** A native accelerator for Undo/Redo/Cut/Copy (`Ctrl+Z/Y/X/C`) takes the key even when focus is in the small text boxes (rename, quick switcher, search panel) and would apply it to the editor instead. So these must be **click-only items without accelerators**, leaving the keys to whatever has focus. The action table then needs a display-only shortcut hint so the menu and Help can still show `Ctrl+Z`.
+2. **Clipboard from a menu click.** A native menu click is not a user gesture inside the page, so the web clipboard calls may be refused by WebKitGTK. The options are a Tauri clipboard plugin (new dependency and permissions) or proving the web call works in the real window.
+3. **Copy as HTML** needs a Markdown to HTML renderer (a new dependency, e.g. `marked`, or CodeMirror's syntax tree), sanitizing, and writing both `text/html` and `text/plain` to the clipboard.
+Undo and Redo on their own are easy (CodeMirror commands), but only worth doing together with the click-only design in point 1.
+
+**Decided: the app says "draft" and "draft directory", not "note" and "notes folder".** The user's menu says "draft directory", and the rest of the app now matches: the folder is the **draft directory**, a file in it is a **draft** (Go to draft, Rename draft, "Couldn't open draft"), and the default directory a button creates is `~/Drafts` (it was `~/Notes`). "File" is still used where the thing may be anywhere (New file, Open, Save as). Internal names are unchanged (`notes_dir` in `config.json`, `notes.rs`, `NoteMeta`...), because nobody sees them and renaming them would break existing config files for no benefit. Older sections of this plan still say "note" in places; read those as "draft". (The phrase "notes folder" has been replaced by "draft directory" throughout.)
 
 Rules for the menubar:
 - **Consent rule applies.** A menu item only runs when the user clicks it or presses its shortcut. Opening a menu never triggers a dialog, a save, or a file change.
 - Show each item's shortcut next to it, and keep menu actions and shortcuts on **one code path** so they can't drift apart.
-- File actions do nothing on the welcome screen (same as shortcuts), because there is no notes folder yet. Help stays available there, since it needs no folder.
+- File actions do nothing on the welcome screen (same as shortcuts), because there is no draft directory yet. Help stays available there, since it needs no folder.
 - "Keyboard shortcuts" is generated from the same table as the real shortcut map, so the list can't go stale.
-
-**Suggestions, not decided** (adopt, change, or drop; none of these are requirements):
-- **File:** New note (`Ctrl+N`), Rename (`Ctrl+Shift+R`), Change notes folder (`Ctrl+,`), Quit.
-- **Edit:** Undo, Redo, Find (`Ctrl+F`), Replace (`Ctrl+H`), Select next occurrence (`Ctrl+D`).
-- **View:** Toggle sidebar (`Ctrl+B`), Quick switcher (`Ctrl+P`).
 
 **Decided: native Tauri menu** (`tauri::menu`), not an in-app HTML menubar. It follows each platform's conventions and works with the macOS global menu bar.
 
-**Decided: File → Close closes the note** (like `Ctrl+W`): it shows a new blank note and the window stays open. There is no Quit item yet; the window's own close button quits.
+**Decided: File → Close closes the note** (like `Ctrl+W`): it shows a new blank note and the window stays open. **Quit** (`Ctrl+Q`) is a separate item that closes the window, going through the same close path as the window's own close button, so unsaved work is still asked about.
 
 **What "native" means for the implementation** (so the "one code path" rule still holds):
 - **The menu is built in Rust** (`.menu(...)` on the Tauri builder, handled in `on_menu_event`). It needs no JS permissions beyond the existing event access.
 - **A menu click reaches the same frontend action as the shortcut.** Rust emits an event carrying the item id; the frontend maps that id to the same function the keyboard shortcut calls (`newNote`, `openWithDialog`, `autosave.flush`, ...). Menu and shortcut must never have two implementations.
 - **One table is the source of truth, and it lives in Rust:** each entry has an `id`, a label and an accelerator. Rust builds the menu from it and exposes it through a command, so Help → Keyboard shortcuts lists what is really bound and the frontend's shortcut map is built from the same data.
 - **Accelerators can swallow keys.** A GTK menu accelerator may consume the key press before the webview sees it. This must be checked on Ubuntu when building: each shortcut must fire exactly once (not zero times, not twice), including while the editor has focus. Don't give a menu item an accelerator that clashes with a CodeMirror key until that is confirmed.
-- **Edit menu items must drive CodeMirror**, not the webview's built-in undo/copy/paste. CodeMirror keeps its own undo history, so Undo/Redo/Find/Replace items should emit events that run the editor commands.
-- **Inert on the welcome screen:** items that need a notes folder start greyed out; the frontend calls `set_menu_enabled(true)` once a folder exists. The frontend also ignores the action itself, as a second guard.
+- **Edit menu items must drive CodeMirror**, not the webview's built-in undo/copy/paste. CodeMirror keeps its own undo history, so they emit events that run the editor commands, and they must be click-only (see "Edit menu" above).
+- **Inert on the welcome screen:** items that need a draft directory start greyed out; the frontend calls `set_menu_enabled(true)` once a folder exists. The frontend also ignores the action itself, as a second guard.
 - **About is an in-app dialog, not the native one.** The native GTK About dialog is created without a parent window, so the window manager places it wherever it likes (and Wayland does not let an app position a window), which left it off-centre. The in-app dialog is centred in the window at any size. Name, version and description come from the `get_about` command (package info and `Cargo.toml`), so they can't drift from the build.
 - **Testing:** the frontend half (id → action, welcome-screen guard) can still be tested in the browser with the stand-in backend; the native menu itself can only be checked in the real window.
 
-**What was built:** `src-tauri/src/menu.rs` (the action table, the menu, the event bridge, `get_actions`, `set_menu_enabled`); `accelerators.ts`, `shortcutsHelp.ts`, and a single `runAction(id)` in `main.ts` that both menu clicks and key presses go through.
+**What was built:** `src-tauri/src/menu.rs` (the action table, the menu, check items, the event bridge, `get_actions`, `set_menu_enabled`, `set_menu_checked`); `accelerators.ts`, `shortcutsHelp.ts`, and a single `runAction(id)` in `main.ts` that both menu clicks and key presses go through.
 
-**Who owns each key (so it fires exactly once):** an action with a menu item (Open `Ctrl+O`, Save `Ctrl+S`, Close `Ctrl+W`) is taken by the native accelerator first. Because it was not possible to confirm from outside the real window whether GTK passes those keys through while the editor has focus, the frontend also listens for them as a safety net (`keyForMenuAction`): if the key reaches the page and the menu does not report the same action within 150 ms, the frontend runs it. If the menu's event arrives (in either order), the frontend does nothing, so the action never runs twice. Actions without a menu item (New note, Go to note, Toggle sidebar, Change notes folder, Rename) are bound by the frontend only. Moving an action into a menu is a one-line change to its `menu` field in the table.
+**Who owns each key (so it fires exactly once):** an action with a menu item (every item in the File and View menus) is taken by the native accelerator first. Because it was not possible to confirm from outside the real window whether GTK passes those keys through while the editor has focus, the frontend also listens for them as a safety net (`keyForMenuAction`): if the key reaches the page and the menu does not report the same action within 150 ms, the frontend runs it. If the menu's event arrives (in either order), the frontend does nothing, so the action never runs twice. Actions without a menu item (Go to note, Rename note) are bound by the frontend only. Moving an action into a menu is a one-line change to its `menu` field in the table.
 
 **Still to verify in the real window on Ubuntu** (cannot be checked in a browser): File items are greyed out on the welcome screen. (Confirmed by the user in the real window: File → Save and `Ctrl+S` work.) A debug build prints `[menu] <id>` to the terminal for each native menu event.
 
 **Dialog placement:** dialogs (About, Keyboard shortcuts, Save / Don't Save prompts) are centred in the window; the quick switcher and rename prompt stay near the top like a command palette.
 
-- **Done when:** the native menus above exist, every item does exactly what its shortcut does (and each shortcut still fires exactly once), menus are greyed out on the welcome screen, and Help → Keyboard shortcuts lists the real shortcuts.
+- **Done when (for the built items):** the native menus above exist, every item does exactly what its shortcut does (and each shortcut still fires exactly once), menus are greyed out on the welcome screen, and Help → Keyboard shortcuts lists the real shortcuts.
+
+### M8: Show / hide the sidebar (built)
+**Requested by the user:** a way to hide and show the sidebar, and `Ctrl+B` toggles the sidebar state.
+
+Where things stand today:
+- **Built:** **View → Show sidebar** (`Ctrl+B`) is a tick item that is ticked while the sidebar is visible. `Ctrl+B`, a menu click, or both together toggle it exactly once, the tick always matches what is on screen, and focus returns to the editor.
+- **Built:** the choice is remembered. It is saved as `sidebar_visible` in `config.json` whenever the user toggles it, and restored at startup (the menu tick is set to match). Restoring writes nothing back. A config with no saved choice, or an older config without the key, starts with the sidebar shown.
+
+The work: give the existing toggle a proper, discoverable form, keep `Ctrl+B` as the toggle, and make sure there is still only **one code path** (`runAction("toggle_sidebar")`) for every way of triggering it.
+
+**Decisions** (all settled):
+1. ~~Where is the visible control?~~ **Decided by the user's menu plan: View → Show sidebar.** No extra on-screen button.
+2. ~~Is the choice remembered between launches?~~ **Decided: yes**, defaulting to shown, stored as `sidebar_visible` in `config.json`.
+3. ~~Should the menu item show its state?~~ **Decided: yes**, as a tick ("conditional" in the user's plan).
+
+Rules:
+- **The consent rule applies:** the sidebar only changes when the user toggles it (key, menu or button). Nothing hides or shows it on its own.
+- **Keep `Ctrl+B` working exactly once.** If the action moves into a native menu, the menu's accelerator owns `Ctrl+B` and the M7 fallback (`keyForMenuAction`) covers the case where the key reaches the page instead; do not bind it a second way.
+- After toggling, focus goes back to the editor, and toggling never touches the open note or its unsaved changes.
+- It behaves the same on the welcome screen as other File actions: there is no sidebar to toggle until a draft directory exists.
+
+- **Done when:** `Ctrl+B` and the menu item both toggle the sidebar, each press toggles it exactly once, the state is remembered across launches, and hiding or showing it never changes the open draft.
+
+### M9: Settings (planned, not started; held on purpose)
+**Requested by the user:** a Settings menu and these settings, with more to be added later.
+
+**The user's question: a settings UI, or a settings file (like VS Code / Sublime)?** Recommendation: **a settings file first, a UI later.**
+- **Why a file first:** the user already works in Sublime Text and VS Code and is used to editing a settings file; it is a fraction of the work of a UI (eight controls, validation and live preview); and a UI can be added later on top of the same file, so nothing is wasted.
+- **Format: JSON, with comments allowed** (like Sublime and VS Code). Rust reads it with the `json5` crate. YAML is more error-prone to hand-edit (indentation) and `serde_yaml` is no longer maintained; TOML would also work (comments, Rust-native) if the user prefers it.
+- **Where:** `settings.json` in the app's config folder, next to `config.json`.
+- **The app never rewrites the user's file**, so their comments and layout survive. Defaults live in the code; the file only holds overrides.
+- **Consent rule:** the file is **not** created at launch. It is created, filled with the defaults as comments, only when the user chooses **Settings → Open settings file** for the first time. That item opens it in the user's own editor.
+- **Reloading:** there is no file watcher (out of scope for v1), so **Settings → Reload settings** applies changes. (Reloading when the window regains focus is a possible later addition.)
+- **A bad value** is ignored (the default is used) and a toast names the key; it must never crash the app or overwrite the file.
+- **One table, like the actions:** a single table in Rust lists each setting (key, type, default, valid range) and is exposed to the frontend, so adding a setting later is one entry plus the code that applies it.
+- **Phase 2: a Settings dialog** that edits the same file. Writing it back would lose comments, so this needs a format-preserving approach or a decision to accept that.
+
+**The settings** (defaults as given by the user, or proposed by me and **confirmed by the user**):
+
+| Setting | Key | Default | Notes |
+|---|---|---|---|
+| Word wrap column | `wrap_column` | 70 | Soft wrap at this width, not a hard line break (confirm). Interacts with View → Toggle wrap; decide together. |
+| Font family | `font_family` | system default text editor font | Use the generic `monospace`, which WebKitGTK maps to the system's monospace font. Today's list is JetBrains Mono, Ubuntu Mono, DejaVu Sans Mono. |
+| Font size | `font_size` | 14 px | The editor is currently 15 px, so the default changes. |
+| Dark or light mode | `theme` | `"system"` (confirmed) | Today the app follows the operating system. Proposal: `"system"`, `"dark"` or `"light"`, so today's behaviour stays the default. |
+| Show line numbers | `line_numbers` | `false` (confirmed) | Matches today. |
+| Tab size | `tab_size` | 4 | |
+| Translate tabs to spaces | `tabs_to_spaces` | `true` (confirmed) | Today the Tab key is not bound in the editor, so it moves focus out of it. This setting means deciding what Tab does: insert indentation. |
+| Auto indent | `auto_indent` | `true` (confirmed) | Matches today's Enter behaviour. |
+
+**Effort, and why this is held for now:** each setting is small once the plumbing exists (read the file, validate, apply, reload), and that plumbing is the real work. Easy once it exists: font size, font family, theme, line numbers, tab size (CodeMirror compartments and CSS variables). A little more: tabs to spaces (Tab key behaviour), auto indent, and the wrap column (layout). The first stage of Draftwick does not need any of them, so the suggested order is: the plumbing plus the five easy settings first, the rest after.
+
+**Settled:** the defaults above. **Going with my recommendations unless the user says otherwise:** the wrap column is a soft-wrap width (not a hard line break), and the settings file is JSON with comments.
 
 ---
 

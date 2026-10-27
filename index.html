@@ -10,22 +10,22 @@
       <div class="welcome-card">
         <h1>Welcome to Draftwick</h1>
         <p>
-          Choose a folder where your notes will be saved. Each note is stored there as a
+          Choose a directory where your drafts will be saved. Each draft is stored there as a
           Markdown file named after the date and time you started it.
         </p>
-        <button id="welcome-choose" class="primary" type="button">Choose notes folder…</button>
-        <button id="welcome-default" class="link" type="button">Use ~/Notes instead</button>
+        <button id="welcome-choose" class="primary" type="button">Choose draft directory…</button>
+        <button id="welcome-default" class="link" type="button">Use ~/Drafts instead</button>
         <p id="welcome-error" role="alert" hidden></p>
       </div>
     </section>
     <div id="app" hidden>
-      <aside id="sidebar" aria-label="Notes"></aside>
+      <aside id="sidebar" aria-label="Drafts"></aside>
       <main id="editor"></main>
     </div>
     <div id="toast" role="status" aria-live="polite" hidden></div>
     <div id="switcher" hidden>
       <div class="panel">
-        <input id="switcher-input" type="text" placeholder="Go to note…" autocomplete="off" spellcheck="false" />
+        <input id="switcher-input" type="text" placeholder="Go to draft…" autocomplete="off" spellcheck="false" />
         <ul id="switcher-list"></ul>
       </div>
     </div>

@@ -185,7 +185,7 @@ pub fn rename_in(path: &Path, new_stem: &str) -> AppResult<NoteMeta> {
     // `exists()` is also true for a case-only rename on case-insensitive filesystems.
     if target.exists() && !same_file(&target, path) {
         return Err(AppError::msg(format!(
-            "A note named \"{stem}.{ext}\" already exists"
+            "A draft named \"{stem}.{ext}\" already exists"
         )));
     }
     fs::rename(path, &target)?;
