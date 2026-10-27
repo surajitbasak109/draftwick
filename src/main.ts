@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import * as api from "./api";
 import { createAutosave } from "./autosave";
 import { createEditor } from "./editor";
+import { detectEol, eolName } from "./lineEndings";
 import { createRenamePrompt } from "./rename";
 import { createSidebar } from "./sidebar";
 import { createSwitcher } from "./switcher";
@@ -22,9 +23,24 @@ interface Current {
    * else is only saved when the user asks (Ctrl+S).
    */
   managed: boolean;
+  /**
+   * True when the file mixes line endings (say CRLF and LF). Saving has to convert them all to
+   * one, which only happens when the user saves explicitly, so it is not autosaved either.
+   */
+  mixedEol: boolean;
 }
 
-const NEW_NOTE: Current = { path: null, name: "", ext: "md", managed: true };
+const NEW_NOTE: Current = { path: null, name: "", ext: "md", managed: true, mixedEol: false };
+
+/**
+ * Why the current document is not autosaved, phrased to follow "because"; null when it is.
+ * Anything that would change a file the user did not edit that way must wait for Ctrl+S.
+ */
+function autosaveOffReason(c: Current): string | null {
+  if (!c.managed) return "it is outside your notes folder";
+  if (c.mixedEol) return "it mixes line endings";
+  return null;
+}
 
 let current: Current = NEW_NOTE;
 let notes: api.NoteMeta[] = [];
@@ -47,7 +63,7 @@ function errorMessage(e: unknown): string {
 
 function updateTitle() {
   const base = current.path ? current.name : "Untitled";
-  const note = current.managed ? "" : " (autosave off)";
+  const note = autosaveOffReason(current) ? " (autosave off)" : "";
   const title = `${autosave.dirty ? "• " : ""}${base}${note} — ${APP_NAME}`;
   document.title = title;
   getCurrentWindow()
@@ -59,7 +75,7 @@ function updateTitle() {
 
 const autosave = createAutosave({
   delayMs: 500,
-  isEnabled: () => current.managed,
+  isEnabled: () => autosaveOffReason(current) === null,
   save: saveCurrent,
   onDirtyChange: updateTitle,
   onError: (e) => toast(`Couldn't save: ${errorMessage(e)}`),
@@ -67,9 +83,9 @@ const autosave = createAutosave({
 
 const editor = createEditor(document.querySelector<HTMLElement>("#editor")!, {
   onChange: () => autosave.touch(),
-  // Losing focus only saves notes in the notes folder, never an outside file.
+  // Losing focus only saves what is allowed to autosave.
   onBlur: () => {
-    if (current.managed) void autosave.flush();
+    if (autosaveOffReason(current) === null) void autosave.flush();
   },
 });
 
@@ -105,37 +121,41 @@ async function saveCurrent() {
     // Don't create empty files: wait until there is something to write.
     if (content === "") return;
     const meta = await api.createNote(content);
-    current = { path: meta.path, name: meta.name, ext: meta.ext, managed: true };
+    current = { path: meta.path, name: meta.name, ext: meta.ext, managed: true, mixedEol: false };
   } else {
     await api.writeNote(current.path, content);
+    // The file now uses a single line ending, so the mixed-endings caution no longer applies.
+    if (current.mixedEol) current = { ...current, mixedEol: false };
   }
   updateTitle();
   await refreshSidebar();
 }
 
-function describe(path: string, managed: boolean): Current {
+function describe(path: string, managed: boolean, mixedEol: boolean): Current {
   const name = path.split(/[\\/]/).pop() ?? path;
   const dot = name.lastIndexOf(".");
-  return { path, name, ext: dot >= 0 ? name.slice(dot + 1).toLowerCase() : "md", managed };
+  const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : "md";
+  return { path, name, ext, managed, mixedEol };
 }
 
 // ---------- actions ----------
 
 /**
- * Makes the current document safe to leave (switch away from, or close). Notes in the notes
- * folder are simply autosaved. A file from outside it is never saved without asking, so with
- * unsaved edits the user chooses Save / Don't Save / Cancel. Returns false when the caller
- * must stay on this document (the user cancelled, or an explicit save failed).
+ * Makes the current document safe to leave (switch away from, or close). Documents that may
+ * autosave are simply saved. Anything else is never saved without asking, so with unsaved edits
+ * the user chooses Save / Don't Save / Cancel. Returns false when the caller must stay on this
+ * document (the user cancelled, or an explicit save failed).
  */
 async function settleCurrent(): Promise<boolean> {
-  if (!autosave.dirty || current.managed) {
+  const reason = autosaveOffReason(current);
+  if (!autosave.dirty || reason === null) {
     await autosave.flush();
     return true;
   }
   promptOpen = true;
   let choice;
   try {
-    choice = await unsaved.ask(current.name);
+    choice = await unsaved.ask(current.name, reason);
   } finally {
     promptOpen = false;
   }
@@ -151,7 +171,7 @@ async function settleCurrent(): Promise<boolean> {
 async function newNote() {
   if (!(await settleCurrent())) return;
   current = NEW_NOTE;
-  editor.setDoc("", "md");
+  editor.setDoc("", "md", "\n");
   autosave.markClean();
   updateTitle();
   sidebar.render(notes, null);
@@ -162,14 +182,17 @@ async function openPath(path: string) {
   try {
     if (!(await settleCurrent())) return;
     const [text, managed] = await Promise.all([api.readNote(path), api.isInNotesDir(path)]);
-    current = describe(path, managed);
-    editor.setDoc(text, current.ext);
+    const { eol, mixed } = detectEol(text);
+    current = describe(path, managed, mixed);
+    editor.setDoc(text, current.ext, eol);
     autosave.markClean();
     updateTitle();
     sidebar.render(notes, current.path);
     editor.focus();
-    if (!managed) {
-      toast("This file is outside your notes folder, so it isn't autosaved. Press Ctrl+S to save.");
+    const reason = autosaveOffReason(current);
+    if (reason !== null) {
+      const convert = mixed ? ` Saving converts every line ending to ${eolName(eol)}.` : "";
+      toast(`Autosave is off for this file because ${reason}. Press Ctrl+S to save.${convert}`);
     }
   } catch (e) {
     toast(`Couldn't open note: ${errorMessage(e)}`);
@@ -212,7 +235,7 @@ async function renameCurrent(stem: string) {
   if (current.path === null) throw new Error("Nothing to rename yet");
   await autosave.flush();
   const meta = await api.renameNote(current.path, stem);
-  current = describe(meta.path, current.managed);
+  current = describe(meta.path, current.managed, current.mixedEol);
   updateTitle();
   await refreshSidebar();
 }
@@ -223,7 +246,7 @@ function startRename() {
     return;
   }
   // Renaming flushes pending edits, which must not happen silently for an outside file.
-  if (!current.managed && autosave.dirty) {
+  if (autosaveOffReason(current) !== null && autosave.dirty) {
     toast("Save the file first (Ctrl+S), then rename it");
     return;
   }

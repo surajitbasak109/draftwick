@@ -5,9 +5,12 @@ import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { tags as t } from "@lezer/highlight";
+import type { Eol } from "./lineEndings";
 
 export interface EditorHandle {
-  setDoc(text: string, ext: string): void;
+  /** `eol` is the line ending the text had on disk; getDoc() writes it back the same way. */
+  setDoc(text: string, ext: string, eol: Eol): void;
+  /** The document text, with lines joined by the ending given to setDoc. */
   getDoc(): string;
   focus(): void;
 }
@@ -74,6 +77,8 @@ function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean
 
 export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHandle {
   let loading = false;
+  // CodeMirror normalizes line endings to "\n" while editing; this restores them on save.
+  let eol: Eol = "\n";
   const isLoading = () => loading;
   const view = new EditorView({
     parent,
@@ -81,8 +86,9 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
   });
 
   return {
-    setDoc(text, ext) {
+    setDoc(text, ext, newEol) {
       loading = true;
+      eol = newEol;
       try {
         // A fresh state also resets undo history, so Ctrl+Z can't cross into another note.
         view.setState(
@@ -92,7 +98,7 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
         loading = false;
       }
     },
-    getDoc: () => view.state.doc.toString(),
+    getDoc: () => view.state.doc.sliceString(0, view.state.doc.length, eol),
     focus: () => view.focus(),
   };
 }

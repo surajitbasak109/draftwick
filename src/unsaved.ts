@@ -1,8 +1,11 @@
 export type UnsavedChoice = "save" | "discard" | "cancel";
 
 export interface UnsavedPrompt {
-  /** Asks what to do with unsaved edits to `name`. Esc or clicking outside means cancel. */
-  ask(name: string): Promise<UnsavedChoice>;
+  /**
+   * Asks what to do with unsaved edits to `name`, which `reason` explains are not autosaved
+   * (phrased to follow "because"). Esc or clicking outside means cancel.
+   */
+  ask(name: string, reason: string): Promise<UnsavedChoice>;
 }
 
 export function createUnsavedPrompt(): UnsavedPrompt {
@@ -35,10 +38,10 @@ export function createUnsavedPrompt(): UnsavedPrompt {
   });
 
   return {
-    ask(name) {
+    ask(name, reason) {
       // A second request while one is open cancels the first rather than stacking dialogs.
       settle("cancel");
-      message.textContent = `Save changes to “${name}”? It isn't autosaved because it is outside your notes folder.`;
+      message.textContent = `Save changes to “${name}”? It isn't autosaved because ${reason}.`;
       root.hidden = false;
       save.focus();
       return new Promise((resolve) => {
