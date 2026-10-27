@@ -72,7 +72,7 @@ From the consent review. You chose items 1 to 4 of that review and left these.
 
 ## Housekeeping
 
-- [ ] Keep the browser-test stand-in backend in the repo as a dev tool (for example under `dev/`) and document it in `.claude/CLAUDE.md`.
+- [x] The browser-test stand-in backend is in the repo (2026-10-27): `pnpm dev:standin` (port 1421), `dev/standin.js`, `dev/actions.mjs`, `vite.standin.config.ts`, documented in `.claude/CLAUDE.md`. Checked by loading it in headless Chrome: the editor with three sample drafts, and the welcome screen with `?welcome`. It does not check `settings.json`.
 - [x] Brought `.claude/PLAN.md` sections 3 and 4 up to date with the code, and said "draft" instead of "note" in the older sections (2026-10-27). Internal names (`notes_dir`, `notes.rs`, `NoteMeta`) stay.
 - [x] The default autosave delay (5000 ms) is still written in `settings.rs` and `main.ts`, but a test in `tests/jsonc.test.mjs` now fails if the two ever differ (2026-10-27). The frontend needs a number before the settings load, so one copy had to stay.
 - [x] The editor keys listed in Help > Keyboard shortcuts now live in `src/editorKeys.ts`, and `tests/editorKeys.test.mjs` fails if a listed key is no longer bound in CodeMirror or `editor.ts` (2026-10-27). It cannot notice a new key that is missing from the list.

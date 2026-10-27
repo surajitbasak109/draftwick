@@ -27,7 +27,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exce
 
 **Out of date on purpose:** sections 3 and 4 (project structure and the Rust command list) describe the original plan only. The current truth is the files in `src` and `src-tauri/src`, and the list in the `generate_handler!` macro in `src-tauri/src/lib.rs`. The older sections also still say "note" where the app now says "draft".
 
-**Not saved in the repo:** the browser-test harness used during development (a stand-in backend page). `.claude/CLAUDE.md` explains how to recreate one.
+**Browser stand-in:** `pnpm dev:standin` serves the frontend in a plain browser against a fake in-memory backend (`dev/standin.js`); `.claude/CLAUDE.md` explains it.
 
 ---
 
