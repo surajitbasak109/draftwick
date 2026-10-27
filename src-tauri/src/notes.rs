@@ -115,8 +115,17 @@ pub fn read_at(path: &Path) -> AppResult<String> {
     })
 }
 
-pub fn write_at(path: &Path, content: &str) -> AppResult<NoteMeta> {
+/// Saves `content` to `path`. Unless `create_if_missing` is set, a file that no longer exists
+/// (deleted or moved while it was open) is reported as `Missing` rather than silently recreated.
+pub fn write_at(path: &Path, content: &str, create_if_missing: bool) -> AppResult<NoteMeta> {
     require_note_ext(path)?;
+    if !create_if_missing && !path.exists() {
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
+        return Err(AppError::Missing(format!(
+            "\"{}\" no longer exists",
+            name.unwrap_or_default()
+        )));
+    }
     atomic_write(path, content.as_bytes())?;
     meta_for(path)
 }
@@ -208,8 +217,8 @@ pub fn read_note(path: String) -> AppResult<String> {
 }
 
 #[tauri::command]
-pub fn write_note(path: String, content: String) -> AppResult<NoteMeta> {
-    write_at(Path::new(&path), &content)
+pub fn write_note(path: String, content: String, create_if_missing: bool) -> AppResult<NoteMeta> {
+    write_at(Path::new(&path), &content, create_if_missing)
 }
 
 #[tauri::command]
@@ -391,10 +400,35 @@ mod tests {
     fn write_and_read_round_trip_and_reject_other_extensions() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("n.md");
-        write_at(&path, "# Title\n").unwrap();
+        write_at(&path, "# Title\n", true).unwrap();
         assert_eq!(read_at(&path).unwrap(), "# Title\n");
         assert!(!dir.path().join("n.md.tmp").exists());
-        assert!(write_at(&dir.path().join("evil.sh"), "x").is_err());
+        assert!(write_at(&dir.path().join("evil.sh"), "x", true).is_err());
         assert!(read_at(&dir.path().join("evil.sh")).is_err());
+    }
+
+    #[test]
+    fn write_to_an_existing_file_needs_no_permission_to_create() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("n.md");
+        fs::write(&path, "old").unwrap();
+        write_at(&path, "new", false).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "new");
+    }
+
+    #[test]
+    fn write_does_not_recreate_a_deleted_file_unless_asked() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("gone.md");
+        fs::write(&path, "text").unwrap();
+        fs::remove_file(&path).unwrap();
+
+        let err = write_at(&path, "typed after deletion", false).unwrap_err();
+        assert!(matches!(err, AppError::Missing(_)), "got {err:?}");
+        assert!(!path.exists(), "the file must not come back by itself");
+        assert!(!dir.path().join("gone.md.tmp").exists());
+
+        write_at(&path, "saved again", true).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "saved again");
     }
 }

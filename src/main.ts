@@ -2,13 +2,13 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import * as api from "./api";
 import { createAutosave } from "./autosave";
+import { createChoicePrompt, type Choice, type ChoiceOptions } from "./choice";
 import { createEditor } from "./editor";
 import { detectEol, eolName } from "./lineEndings";
 import { createRenamePrompt } from "./rename";
 import { createSidebar } from "./sidebar";
 import { createSwitcher } from "./switcher";
 import { installShortcuts } from "./shortcuts";
-import { createUnsavedPrompt } from "./unsaved";
 import "./styles.css";
 
 const APP_NAME = "Draftwick";
@@ -30,6 +30,11 @@ interface Current {
   mixedEol: boolean;
   /** Whether the file on disk currently has any text. */
   hasText: boolean;
+  /**
+   * The file was deleted or moved while open and the user chose to keep editing. Autosave stays
+   * off, so the file is not silently recreated; an explicit Ctrl+S recreates it.
+   */
+  missing: boolean;
 }
 
 const NEW_NOTE: Current = {
@@ -39,6 +44,7 @@ const NEW_NOTE: Current = {
   managed: true,
   mixedEol: false,
   hasText: false,
+  missing: false,
 };
 
 const EMPTY_REASON = "it is empty, which would erase the text in the saved file";
@@ -48,6 +54,7 @@ const EMPTY_REASON = "it is empty, which would erase the text in the saved file"
  * Anything that would change a file the user did not edit that way must wait for Ctrl+S.
  */
 function autosaveOffReason(c: Current): string | null {
+  if (c.missing) return "its file was deleted or moved";
   if (!c.managed) return "it is outside your notes folder";
   if (c.mixedEol) return "it mixes line endings";
   // Clearing a note must not wipe its file behind the user's back; only Ctrl+S may do that.
@@ -116,12 +123,22 @@ const editor = createEditor(document.querySelector<HTMLElement>("#editor")!, {
   onChange: onEdited,
   // Losing focus only saves what is allowed to autosave.
   onBlur: () => {
-    if (autosaveOffReason(current) === null) void autosave.flush();
+    if (autosaveOffReason(current) === null) void autosave.flush(false);
   },
 });
 
-const unsaved = createUnsavedPrompt();
+const choicePrompt = createChoicePrompt();
 let promptOpen = false;
+
+/** Shows the choice prompt. Shortcuts are ignored while it waits for an answer. */
+async function ask(options: ChoiceOptions): Promise<Choice> {
+  promptOpen = true;
+  try {
+    return await choicePrompt.ask(options);
+  } finally {
+    promptOpen = false;
+  }
+}
 
 const sidebar = createSidebar(
   document.querySelector<HTMLElement>("#sidebar")!,
@@ -146,11 +163,19 @@ async function refreshSidebar() {
   sidebar.render(notes, current.path);
 }
 
-async function saveCurrent() {
+/**
+ * Saves the current document. Resolves true when it is saved (or there was nothing to save),
+ * and false when it was not, so it must stay marked as unsaved. `explicit` is true when the
+ * user asked for the save; otherwise it only goes ahead if autosave is still allowed now.
+ */
+async function saveCurrent(explicit: boolean): Promise<boolean> {
+  // Queued saves can run after the situation changed (the user chose Keep editing, cleared
+  // the note...), so an implicit save checks again rather than trusting when it was scheduled.
+  if (!explicit && autosaveOffReason(current) !== null) return false;
   const content = editor.getDoc();
   if (current.path === null) {
     // Don't create empty files: wait until there is something to write.
-    if (content === "") return;
+    if (content === "") return true;
     const meta = await api.createNote(content);
     current = {
       path: meta.path,
@@ -159,21 +184,64 @@ async function saveCurrent() {
       managed: true,
       mixedEol: false,
       hasText: true,
+      missing: false,
     };
   } else {
-    await api.writeNote(current.path, content);
-    // The file now has a single line ending, so the mixed-endings caution no longer applies.
-    current = { ...current, mixedEol: false, hasText: content !== "" };
+    const outcome = await writeExisting(current.path, content, explicit);
+    if (outcome === "kept") return false;
+    if (outcome === "closed") return true; // the note was closed; nothing is left to save
   }
   updateTitle();
   await refreshSidebar();
+  return true;
+}
+
+type WriteOutcome = "saved" | "closed" | "kept";
+
+/**
+ * Saves over an existing note's file. If that file was deleted or moved since it was opened,
+ * nothing is recreated until the user says so.
+ */
+async function writeExisting(
+  path: string,
+  content: string,
+  explicit: boolean,
+): Promise<WriteOutcome> {
+  try {
+    // After the user chose Keep editing, their own Ctrl+S is the go-ahead to recreate it.
+    await api.writeNote(path, content, explicit && current.missing);
+  } catch (e) {
+    if (!(e instanceof api.ApiError && e.kind === "missing")) throw e;
+    // This can pop up while the user is typing, so a stray Enter or Space must be harmless.
+    const picked = await ask({
+      message: `“${current.name}” was deleted or moved outside Draftwick. Save it again?`,
+      primary: "Save again",
+      secondary: "Close without saving",
+      cancel: "Keep editing",
+      focus: "cancel",
+    });
+    if (picked === "cancel") {
+      current = { ...current, missing: true };
+      updateTitle();
+      toast("Autosave is off because the file is gone. Press Ctrl+S to save it again.");
+      return "kept";
+    }
+    if (picked === "secondary") {
+      resetToBlank();
+      return "closed";
+    }
+    await api.writeNote(path, content, true);
+  }
+  // The file exists again with a single line ending, so earlier cautions no longer apply.
+  current = { ...current, mixedEol: false, hasText: content !== "", missing: false };
+  return "saved";
 }
 
 function describe(path: string, managed: boolean, mixedEol: boolean, hasText: boolean): Current {
   const name = path.split(/[\\/]/).pop() ?? path;
   const dot = name.lastIndexOf(".");
   const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : "md";
-  return { path, name, ext, managed, mixedEol, hasText };
+  return { path, name, ext, managed, mixedEol, hasText, missing: false };
 }
 
 // ---------- actions ----------
@@ -187,33 +255,38 @@ function describe(path: string, managed: boolean, mixedEol: boolean, hasText: bo
 async function settleCurrent(): Promise<boolean> {
   const reason = autosaveOffReason(current);
   if (!autosave.dirty || reason === null) {
-    await autosave.flush();
-    return true;
+    await autosave.flush(false);
+    // The save may have found the file gone, and the user chose to keep editing: stay here.
+    return !(autosave.dirty && current.missing);
   }
-  promptOpen = true;
-  let choice;
-  try {
-    choice = await unsaved.ask(current.name, reason);
-  } finally {
-    promptOpen = false;
-  }
-  if (choice === "cancel") return false;
-  if (choice === "save") {
-    await autosave.flush();
+  const picked = await ask({
+    message: `Save changes to “${current.name}”? It isn't autosaved because ${reason}.`,
+    primary: "Save",
+    secondary: "Don't Save",
+    cancel: "Cancel",
+  });
+  if (picked === "cancel") return false;
+  if (picked === "primary") {
+    await autosave.flush(true);
     return !autosave.dirty;
   }
   autosave.markClean();
   return true;
 }
 
-async function newNote() {
-  if (!(await settleCurrent())) return;
+/** Replaces whatever is open with a new, empty note. Callers settle the old document first. */
+function resetToBlank() {
   current = NEW_NOTE;
   editor.setDoc("", "md", "\n");
   autosave.markClean();
   updateTitle();
   sidebar.render(notes, null);
   editor.focus();
+}
+
+async function newNote() {
+  if (!(await settleCurrent())) return;
+  resetToBlank();
 }
 
 async function openPath(path: string) {
@@ -271,7 +344,7 @@ async function changeNotesDir() {
 
 async function renameCurrent(stem: string) {
   if (current.path === null) throw new Error("Nothing to rename yet");
-  await autosave.flush();
+  await autosave.flush(false);
   const meta = await api.renameNote(current.path, stem);
   current = describe(meta.path, current.managed, current.mixedEol, current.hasText);
   updateTitle();

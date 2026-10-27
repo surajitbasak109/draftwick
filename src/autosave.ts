@@ -5,10 +5,13 @@ export interface Autosave {
    */
   touch(): void;
   /**
-   * Save now if there are unsaved edits, and wait for any save already in flight. This is an
-   * explicit save, so it works even when autosave is disabled for the document.
+   * Save now if there are unsaved edits, and wait for any save already in flight.
+   *
+   * `explicit` is true when the user asked for this save (Ctrl+S, or answering a prompt). The
+   * default is true. Pass false for saves the app starts itself (blur, leaving a note): they are
+   * skipped if autosave is no longer allowed by the time they run.
    */
-  flush(): Promise<void>;
+  flush(explicit?: boolean): Promise<void>;
   /** Forget pending edits, e.g. right after loading a different document. */
   markClean(): void;
   readonly dirty: boolean;
@@ -18,7 +21,12 @@ interface Options {
   delayMs: number;
   /** Whether edits to the current document may be saved without the user asking. */
   isEnabled: () => boolean;
-  save: () => Promise<void>;
+  /**
+   * Resolves true when the document is saved (or there was nothing to save), false if it was
+   * not saved. `explicit` says whether the user asked for it; an implicit save must re-check
+   * that autosave is still allowed, because things can change while a save waits in the queue.
+   */
+  save: (explicit: boolean) => Promise<boolean>;
   onDirtyChange: (dirty: boolean) => void;
   onError: (error: unknown) => void;
 }
@@ -38,12 +46,12 @@ export function createAutosave(opts: Options): Autosave {
     }
   }
 
-  function runSave(): Promise<void> {
+  function runSave(explicit: boolean): Promise<void> {
     const savedVersion = version;
     queue = queue.then(async () => {
       try {
-        await opts.save();
-        if (savedVersion === version) setDirty(false);
+        const saved = await opts.save(explicit);
+        if (saved && savedVersion === version) setDirty(false);
       } catch (e) {
         opts.onError(e);
       }
@@ -56,11 +64,11 @@ export function createAutosave(opts: Options): Autosave {
       version++;
       setDirty(true);
       clearTimeout(timer);
-      if (opts.isEnabled()) timer = setTimeout(runSave, opts.delayMs);
+      if (opts.isEnabled()) timer = setTimeout(() => void runSave(false), opts.delayMs);
     },
-    flush() {
+    flush(explicit = true) {
       clearTimeout(timer);
-      return dirty ? runSave() : queue;
+      return dirty ? runSave(explicit) : queue;
     },
     markClean() {
       clearTimeout(timer);
