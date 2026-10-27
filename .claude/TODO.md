@@ -7,10 +7,6 @@ The checklist of work that is left. `.claude/PLAN.md` holds the design and the d
 - An item is ticked only when it is **done and verified**: it builds, the checks pass (`pnpm typecheck`, `pnpm build`, `pnpm test`, `cargo test`), and it was tested. Anything only the real Draftwick window can show is checked by **you**: the agent leaves the box open and writes "built, needs your check" beside it. You tick it, or tell the agent to.
 - To add something, write a new `- [ ]` line under the right heading (or ask the agent to). Items under "Decisions needed" are **not built until you say so**.
 
-## Needs information from you
-
-- [ ] **The second feature** from your "two more functionality" message. Only the JSON highlighting was listed. What was it?
-
 ## Suggested by you
 
 - [ ] **Status bar at the bottom of the window.** Needs a decision first: what should it show? Candidates: the draft's name, line and column, "Saved" / "Unsaved" / "Autosave off", word count, line ending (LF or CRLF).
