@@ -1,11 +1,34 @@
 # Draftwick — Implementation Plan
 
 A fast, minimal desktop editor for quick drafts (meeting notes, pasted chat/web text).
-It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
+It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exception: its own settings file, see M9).
 
-> **For the implementing agent (Sonnet 5.5):** every decision below is already made.
-> Don't revisit the stack or the behavior. If something is truly blocked, stop and ask the user.
-> "Draftwick" is a working name, so keep it in one place (`tauri.conf.json` `productName`) to make renaming easy.
+> **Read `CLAUDE.md` first** (how to work in this repo, and the user's rules). This file is the spec and the history. It was written before the build and updated as decisions were made: **where an older section disagrees with a newer one (M7 to M9, the "Decided" notes), the newer one wins.** Where the plan and the code disagree, ask the user which is right instead of assuming.
+
+## Status and next steps
+
+*As of commit `7dbebff` on `main`. The repo has no remote.*
+
+**Built and committed**
+- **Editor and drafts (M0 to M5):** CodeMirror editor, welcome screen that asks for a draft directory (no dialog opens by itself), draft files named by date and time, sidebar, quick switcher, rename.
+- **Safety rules (the "consent" work):** autosave only inside the draft directory; files opened from elsewhere save only on `Ctrl+S`; a file's line endings are preserved; an emptied draft is never autosaved over a file with text; a deleted file is never silently recreated; saves are explicit or implicit (see `CLAUDE.md`).
+- **Menubar (M7):** native menu. File: New file, Open, Open/Set draft directory, Save, Close (closes the draft), Quit. View: Show sidebar (tick). Settings: Open settings file, Reload settings. Help: About, Keyboard shortcuts. All built from one action table in `menu.rs`.
+- **Sidebar (M8):** `Ctrl+B` and View > Show sidebar; the choice is remembered.
+- **Settings (M9, first part):** `settings.json` with the autosave delay (default 5 s, range 0.5 to 30 s); opened inside the editor, highlighted, and checked for mistakes while typing and on save.
+- **Wording:** the app says "draft" and "draft directory" throughout.
+- **Checks:** typecheck, build, `pnpm test` and `cargo test` all pass.
+
+**Needs a check in the real window** (an agent cannot see or click it, so the user has to): Settings > Open settings file and the error underlines; the View tick; Quit; that the sidebar choice survives a restart; File items greyed out on the welcome screen; that closing the window saves an open draft.
+
+**Next, in the order I would take them**
+1. **A second feature the user mentioned but never described.** Their message listed only the JSON highlighting. Ask what it was.
+2. **M6, packaging:** `pnpm tauri build`; install the `.deb` and check it appears in the launcher; measure startup (target under 500 ms) and memory (under 150 MB); the content-security policy is still off (`null`) and should be tightened; the icon is a generated placeholder.
+3. **Held on purpose, each with its reason in M7 and M9:** Save as (`Ctrl+Shift+S`); the Edit menu (Undo, Redo, Cut, Copy, Copy as HTML; these must be click-only, without accelerators); View > Toggle wrap; Enter full screen (`F11`); the remaining settings (wrap column, font family and size, theme, line numbers, tab size, tabs to spaces, auto indent); a Settings dialog on top of the settings file.
+4. **Raised in the consent review but not chosen by the user, so leave them unless asked:** a draft file is created on the first keystroke; closing the window saves quietly with no prompt for normal drafts; a temporary `.tmp` file appears next to a draft while it saves; `Ctrl+W` and `Ctrl+N` save and swap drafts.
+
+**Out of date on purpose:** sections 3 and 4 (project structure and the Rust command list) describe the original plan only. The current truth is the files in `src` and `src-tauri/src`, and the list in the `generate_handler!` macro in `src-tauri/src/lib.rs`. The older sections also still say "note" where the app now says "draft".
+
+**Not saved in the repo:** the browser-test harness used during development (a stand-in backend page). `CLAUDE.md` explains how to recreate one.
 
 ---
 
