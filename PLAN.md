@@ -173,6 +173,56 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 - Set `productName`, `identifier` (`dev.draftwick.app`), version `0.1.0`, and an app icon (`pnpm tauri icon <png>`; a simple generated placeholder is fine).
 - **Done when:** the `.deb` installs on Ubuntu, Draftwick appears in the app launcher, and launches.
 
+### M7: Menubar (planned, not started)
+Add a menubar. **The menus and items below were specified by the user** and are requirements:
+
+- **File**
+  - Open
+  - Save
+  - Close
+- **Help**
+  - About
+  - Keyboard shortcuts
+- **…** (the user will add more menus and items)
+
+How the specified items map onto what already exists (each is just another way to trigger an existing action, so no new behavior is invented):
+
+| Menu item | Does | Existing shortcut |
+|---|---|---|
+| File → Open | Open any `.md`/`.txt` file via the file dialog | `Ctrl+O` |
+| File → Save | Explicit save (the only way to save a file outside the notes folder, an emptied note, or a note whose file was deleted) | `Ctrl+S` |
+| File → Close | Close the current note and show a new blank one, asking Save / Don't Save / Cancel first where the usual rules require it | `Ctrl+W` |
+| Help → About | Show the app name, version (from `tauri.conf.json`), and a one-line description | none |
+| Help → Keyboard shortcuts | Show a list of every shortcut | none |
+
+Rules for the menubar:
+- **Consent rule applies.** A menu item only runs when the user clicks it or presses its shortcut. Opening a menu never triggers a dialog, a save, or a file change.
+- Show each item's shortcut next to it, and keep menu actions and shortcuts on **one code path** so they can't drift apart.
+- Menus do nothing on the welcome screen (same as shortcuts), because there is no notes folder yet.
+- "Keyboard shortcuts" is generated from the same table as the real shortcut map, so the list can't go stale.
+
+**Suggestions, not decided** (adopt, change, or drop; none of these are requirements):
+- **File:** New note (`Ctrl+N`), Rename (`Ctrl+Shift+R`), Change notes folder (`Ctrl+,`), Quit.
+- **Edit:** Undo, Redo, Find (`Ctrl+F`), Replace (`Ctrl+H`), Select next occurrence (`Ctrl+D`).
+- **View:** Toggle sidebar (`Ctrl+B`), Quick switcher (`Ctrl+P`).
+
+**Decided: native Tauri menu** (`tauri::menu`), not an in-app HTML menubar. It follows each platform's conventions and works with the macOS global menu bar.
+
+**Still open for the user:**
+- **What should File → Close do?** As written it closes the *note* (like `Ctrl+W`). If it should close the *window*, add a separate Quit item.
+
+**What "native" means for the implementation** (so the "one code path" rule still holds):
+- **The menu is built in Rust** (`.menu(...)` on the Tauri builder, handled in `on_menu_event`). It needs no JS permissions beyond the existing event access.
+- **A menu click reaches the same frontend action as the shortcut.** Rust emits an event carrying the item id; the frontend maps that id to the same function the keyboard shortcut calls (`newNote`, `openWithDialog`, `autosave.flush`, ...). Menu and shortcut must never have two implementations.
+- **One table is the source of truth, and it lives in Rust:** each entry has an `id`, a label and an accelerator. Rust builds the menu from it and exposes it through a command, so Help → Keyboard shortcuts lists what is really bound and the frontend's shortcut map is built from the same data.
+- **Accelerators can swallow keys.** A GTK menu accelerator may consume the key press before the webview sees it. This must be checked on Ubuntu when building: each shortcut must fire exactly once (not zero times, not twice), including while the editor has focus. Don't give a menu item an accelerator that clashes with a CodeMirror key until that is confirmed.
+- **Edit menu items must drive CodeMirror**, not the webview's built-in undo/copy/paste. CodeMirror keeps its own undo history, so Undo/Redo/Find/Replace items should emit events that run the editor commands.
+- **Inert on the welcome screen:** the frontend tells Rust when a notes folder exists, and Rust enables or disables the items (`set_enabled`), so they are visibly greyed out, not just ignored.
+- **About:** use the native About dialog (`PredefinedMenuItem::about` with name, version, description) rather than a custom window.
+- **Testing:** the frontend half (id → action, welcome-screen guard) can still be tested in the browser with the stand-in backend; the native menu itself can only be checked in the real window.
+
+- **Done when:** the native menus above exist, every item does exactly what its shortcut does (and each shortcut still fires exactly once), menus are greyed out on the welcome screen, and Help → Keyboard shortcuts lists the real shortcuts.
+
 ---
 
 ## 6. Testing
