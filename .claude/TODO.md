@@ -35,7 +35,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [x] Install the `.deb` on Ubuntu: Draftwick appears in the launcher and starts; the AppImage also runs. Checked by the user on 2026-10-27 (packages rebuilt from `c288c22`).
 - [ ] Measure start-up (target under 500 ms on a warm start) and idle memory (under 150 MB); write the numbers into `.claude/PLAN.md`.
 - [x] Content-security policy is on (own files only; inline styles allowed for CodeMirror; IPC allowed). Checked by the user in a release build and in `pnpm tauri dev` on 2026-10-27.
-- [ ] Replace the generated placeholder icon with a real one.
+- [ ] Replace the generated placeholder icon with a real one. Built, needs your check: an original icon (a page with a folded corner, three text lines, and a small flame as the "wick") drawn as `src-tauri/icons/icon.svg`, with every size generated from it by `pnpm tauri icon`. See it by rebuilding the packages (`pnpm tauri build`) or running `pnpm tauri dev`. Not yet a guarantee of repository acceptance: see the note on licensing and the Ubuntu archive in the conversation; the Snap Store is the easier route.
 
 ## Menu items held back (see M7 in `.claude/PLAN.md` for the reasons)
 
@@ -63,10 +63,10 @@ The agent cannot see or click the real window, so these are yours. Everything be
 
 From the consent review. You chose items 1 to 4 of that review and left these.
 
-- [ ] A draft file is created on the first keystroke. Alternatives: create it on the first `Ctrl+S`, or ask for a name.
-- [ ] Closing the window saves a normal draft quietly, with no prompt. Alternative: prompt when there are unsaved changes.
-- [ ] A temporary `<name>.tmp` file appears next to a draft while it saves. Alternatives: write in place, or put the temp file elsewhere.
-- [ ] `Ctrl+W` and `Ctrl+N` save the current draft and swap in a blank one.
+- [x] A draft file is created on the first keystroke. Decided 2026-10-27: keep it (the user left it to the agent).
+- [x] Closing the window saves a normal draft quietly, with no prompt. Decided 2026-10-27: keep it (the user left it to the agent).
+- [x] A temporary `<name>.tmp` file appears next to a draft while it saves. Decided 2026-10-27: keep it; it makes a save all-or-nothing.
+- [x] `Ctrl+W` and `Ctrl+N` save the current draft and swap in a blank one. Decided 2026-10-27: keep it; files outside the draft directory still ask first.
 
 ## Housekeeping
 
