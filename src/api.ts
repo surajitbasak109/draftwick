@@ -108,6 +108,8 @@ export const getAbout = () => call<AboutInfo>("get_about");
 /** Greys the menu items that need a notes folder in or out. */
 export const setMenuEnabled = (enabled: boolean) => call<void>("set_menu_enabled", { enabled });
 /** Sets the tick on a check item in the menu, e.g. "toggle_sidebar". */
+/** Changes the text of a menu item (the full screen item flips between Enter and Exit). */
+export const setMenuText = (id: string, text: string) => call<void>("set_menu_text", { id, text });
 export const setMenuChecked = (id: string, checked: boolean) =>
   call<void>("set_menu_checked", { id, checked });
 export const getConfig = () => call<Config>("get_config");

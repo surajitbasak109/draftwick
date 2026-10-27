@@ -521,9 +521,22 @@ const handlers: Record<string, () => void> = {
   shortcuts: () => shortcutsHelp.open(actionTable),
   open_settings: () => void openSettingsFile(),
   reload_settings: () => void applySettings(true),
+  fullscreen: () => void toggleFullscreen(),
   undo: () => editor.undo(),
   redo: () => editor.redo(),
 };
+
+/** F11 and View > Enter full screen. The menu text follows what the window really did. */
+async function toggleFullscreen() {
+  try {
+    const win = getCurrentWindow();
+    await win.setFullscreen(!(await win.isFullscreen()));
+    const now = await win.isFullscreen();
+    await api.setMenuText("fullscreen", now ? "Exit full screen" : "Enter full screen");
+  } catch (e) {
+    toast(`Couldn't change full screen: ${errorMessage(e)}`);
+  }
+}
 
 /** Keeps the tick on View > Show sidebar in step with the sidebar. */
 function syncSidebarTick() {

@@ -44,7 +44,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [ ] **Edit > Cut, Copy.** Clipboard access from a menu click may be refused by the web view; needs proving in the real window, or a clipboard plugin.
 - [ ] **Edit > Copy as HTML.** Needs a Markdown to HTML renderer, sanitising, and writing both HTML and plain text to the clipboard.
 - [ ] **View > Toggle wrap.** Easy; decide together with the word wrap column setting.
-- [ ] **View > Enter full screen** (`F11`). Needs shortcuts without `Ctrl`, two window permissions, and a label that flips to "Exit full screen".
+- [x] **View > Enter full screen** (`F11`). Checked by the user on 2026-10-27. The menu text flips to "Exit full screen"; uses the `set-fullscreen` and `is-fullscreen` window permissions. Known gap: if the window manager leaves full screen by itself, the menu text can stay "Exit full screen" until the next toggle.
 
 ## Settings (M9): the plumbing exists, each one is a key plus the code that applies it
 

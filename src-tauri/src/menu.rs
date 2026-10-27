@@ -84,6 +84,9 @@ pub const ACTIONS: &[Action] = &[
     // ---- View ----
     // Shows a tick while the sidebar is visible; the frontend keeps the tick in step.
     Action::new("toggle_sidebar", "Show sidebar", Some("CmdOrCtrl+B"), Some("View"), true).ticked(),
+    // Its label flips between "Enter full screen" and "Exit full screen" (`set_menu_text`). F11 is
+    // the only shortcut without Ctrl.
+    Action::new("fullscreen", "Enter full screen", Some("F11"), Some("View"), true),
     // ---- Settings ----
     // The settings file opens in the editor, which is hidden on the welcome screen, so opening it
     // waits for a draft directory. Reloading needs no editor, so it works from the start.
@@ -214,6 +217,23 @@ pub fn set_menu_enabled(app: AppHandle, enabled: bool) -> AppResult<()> {
     Ok(())
 }
 
+/// Changes the text of a plain menu item, e.g. "Enter full screen" to "Exit full screen".
+#[tauri::command]
+pub fn set_menu_text(app: AppHandle, id: String, text: String) -> AppResult<()> {
+    let Some(menu) = app.menu() else {
+        return Ok(());
+    };
+    for top in menu.items().map_err(tauri_error)? {
+        let MenuItemKind::Submenu(submenu) = top else {
+            continue;
+        };
+        if let Some(MenuItemKind::MenuItem(item)) = submenu.get(id.as_str()) {
+            item.set_text(text.as_str()).map_err(tauri_error)?;
+        }
+    }
+    Ok(())
+}
+
 /// Sets the tick on a check item, e.g. "Show sidebar". The frontend calls this after anything that
 /// changes the state, including the keyboard shortcut, so the tick always matches reality.
 #[tauri::command]
@@ -275,7 +295,7 @@ mod tests {
             ["New file", "Open", "Open/Set draft directory", "Save", "Close", "Quit"]
         );
         assert_eq!(menu_labels("Edit"), ["Undo", "Redo"]);
-        assert_eq!(menu_labels("View"), ["Show sidebar"]);
+        assert_eq!(menu_labels("View"), ["Show sidebar", "Enter full screen"]);
         assert_eq!(menu_labels("Settings"), ["Open settings file", "Reload settings"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
     }
@@ -286,6 +306,13 @@ mod tests {
             let Some(accel) = action.accelerator else {
                 continue;
             };
+            // A function key stands alone (F11); everything else is Ctrl/Cmd plus a key.
+            let is_function_key = accel.len() >= 2
+                && accel.starts_with('F')
+                && accel[1..].chars().all(|c| c.is_ascii_digit());
+            if is_function_key {
+                continue;
+            }
             let parts: Vec<&str> = accel.split('+').collect();
             assert_eq!(parts[0], "CmdOrCtrl", "{}: {accel}", action.id);
             let (key, modifiers) = parts.split_last().unwrap();

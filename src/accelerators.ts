@@ -7,6 +7,8 @@ const MODIFIERS = new Set(["cmdorctrl", "commandorcontrol", "cmd", "command", "c
 
 /** The key combo format used by shortcuts.ts: "Mod+shift+r". Throws for anything unsupported. */
 export function toCombo(accelerator: string): string {
+  // A function key stands alone ("F11"); shortcuts.ts uses the same lowercase name.
+  if (/^F\d{1,2}$/.test(accelerator)) return accelerator.toLowerCase();
   const parts = accelerator.split("+");
   const key = parts.pop();
   if (!key) throw new Error(`Bad accelerator: ${accelerator}`);

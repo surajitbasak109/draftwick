@@ -15,6 +15,7 @@ pub fn run() {
             menu::get_about,
             menu::set_menu_enabled,
             menu::set_menu_checked,
+            menu::set_menu_text,
             settings::get_settings,
             settings::check_settings,
             settings::prepare_settings_file,

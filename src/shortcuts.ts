@@ -2,6 +2,10 @@ export type ShortcutMap = Record<string, () => void>;
 
 /** "Mod" is Ctrl (or Cmd on macOS). Keys are lowercase, e.g. "Mod+shift+r". */
 function combo(e: KeyboardEvent): string {
+  // Function keys (F11) are bound without Ctrl.
+  if (/^F\d{1,2}$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    return e.key.toLowerCase();
+  }
   if (e.altKey || !(e.ctrlKey || e.metaKey)) return "";
   return "Mod+" + (e.shiftKey ? "shift+" : "") + e.key.toLowerCase();
 }
