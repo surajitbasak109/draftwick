@@ -113,5 +113,7 @@ export const readNote = (path: string) => call<string>("read_note", { path });
 export const writeNote = (path: string, content: string, createIfMissing = false) =>
   call<NoteMeta>("write_note", { path, content, createIfMissing });
 export const createNote = (content: string) => call<NoteMeta>("create_note", { content });
+/** Moves a draft to the system trash (never a permanent delete). */
+export const trashNote = (path: string) => call<void>("trash_note", { path });
 export const renameNote = (path: string, newStem: string) =>
   call<NoteMeta>("rename_note", { path, newStem });

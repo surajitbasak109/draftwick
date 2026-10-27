@@ -26,6 +26,8 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [x] On the welcome screen (reset the throwaway config to see it) the File items are greyed out, Help still works, and "Use ~/Drafts instead" creates the folder only when clicked. Checked by the user on 2026-10-27.
 - [x] Help > About is centred in the window.
 
+- [ ] **Sidebar: trash icon, right-click menu with Rename and Delete.** Built, needs your check.  The menu is styled like a rounded popover (draft name as a muted heading, pencil and trash icons, Delete in red below a divider) with separate colours for the dark and light themes; check both. Hovering a draft shows a trash icon (inline SVG) at its right; clicking it asks "Move “name” to the trash?" (Cancel is focused). Right-clicking a draft opens a small menu with **Rename** and **Delete** (Esc, a click elsewhere, scrolling or choosing an item closes it; arrow keys move). Delete asks the same question. Rename opens the rename prompt for that draft, whether or not it is the open one. Check: the file goes to the system trash and can be restored; deleting the open draft leaves a blank draft and the file does not come back after the autosave delay; Cancel and Esc do nothing; renaming a draft that is not open keeps it in the list under the new name and does not change the open draft; renaming the open draft still updates the title.
+
 ## M6: packaging
 
 - [x] `pnpm tauri build` produces the `.deb` (2.1 MiB) and the AppImage (84.5 MiB); both built on 2026-10-27.

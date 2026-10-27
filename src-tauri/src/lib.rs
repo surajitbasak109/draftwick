@@ -28,6 +28,7 @@ pub fn run() {
             notes::write_note,
             notes::create_note,
             notes::rename_note,
+            notes::trash_note,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Draftwick");

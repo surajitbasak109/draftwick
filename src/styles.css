@@ -17,6 +17,12 @@
   --hl-keyword: #c792ea;
   --hl-comment: #7d8590;
   --toast-bg: #2c2e33;
+  --menu-bg: #25272b;
+  --menu-border: #3a3d43;
+  --menu-hover: #33363c;
+  --menu-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --danger: #f0716a;
+  --danger-bg: rgba(240, 113, 106, 0.14);
   --mono: "JetBrains Mono", "Ubuntu Mono", "DejaVu Sans Mono", monospace;
   --ui: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
   color-scheme: dark;
@@ -42,6 +48,12 @@
     --hl-keyword: #7e22ce;
     --hl-comment: #6b7280;
     --toast-bg: #24272b;
+    --menu-bg: #ffffff;
+    --menu-border: #dcdfe5;
+    --menu-hover: #eef0f4;
+    --menu-shadow: 0 10px 30px rgba(20, 24, 33, 0.16), 0 2px 6px rgba(20, 24, 33, 0.08);
+    --danger: #c9372c;
+    --danger-bg: rgba(201, 55, 44, 0.09);
     color-scheme: light;
   }
 }
@@ -93,10 +105,23 @@ body {
   overflow: hidden;
 }
 
+.note-row {
+  position: relative;
+  border-radius: 4px;
+}
+
+.note-row:hover {
+  background: var(--border);
+}
+
+.note-row.active {
+  background: var(--selection);
+}
+
 .note-item {
   display: block;
   width: 100%;
-  padding: 6px 10px;
+  padding: 6px 28px 6px 10px;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -109,11 +134,35 @@ body {
   cursor: pointer;
 }
 
-.note-item:hover {
-  background: var(--border);
+.note-delete {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.note-item.active {
+.note-row:hover .note-delete,
+.note-delete:focus-visible {
+  display: block;
+}
+
+.note-delete svg {
+  display: block;
+  margin: auto;
+}
+
+.note-delete:hover {
   background: var(--selection);
 }
 
@@ -450,4 +499,71 @@ body {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* ---------- sidebar right-click menu ---------- */
+
+.ctx-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 6px;
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  border-radius: 10px;
+  box-shadow: var(--menu-shadow);
+  font-family: var(--ui);
+  font-size: 14px;
+}
+
+.ctx-menu .ctx-title {
+  padding: 6px 10px 6px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctx-menu .ctx-sep {
+  height: 1px;
+  margin: 4px 4px;
+  background: var(--menu-border);
+}
+
+.ctx-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-menu button svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.ctx-menu button:hover,
+.ctx-menu button:focus-visible {
+  background: var(--menu-hover);
+  outline: none;
+}
+
+.ctx-menu button.danger,
+.ctx-menu button.danger svg {
+  color: var(--danger);
+}
+
+.ctx-menu button.danger:hover,
+.ctx-menu button.danger:focus-visible {
+  background: var(--danger-bg);
 }

@@ -3,7 +3,8 @@ export type Choice = "primary" | "secondary" | "cancel";
 export interface ChoiceOptions {
   message: string;
   primary: string;
-  secondary: string;
+  /** A third button; leave it out for a plain two-button question. */
+  secondary?: string;
   cancel: string;
   /**
    * Which button starts focused. Use "cancel" when the prompt can appear while the user is
@@ -52,7 +53,8 @@ export function createChoicePrompt(): ChoicePrompt {
       settle("cancel");
       message.textContent = options.message;
       primary.textContent = options.primary;
-      secondary.textContent = options.secondary;
+      secondary.textContent = options.secondary ?? "";
+      secondary.hidden = options.secondary === undefined;
       cancel.textContent = options.cancel;
       root.hidden = false;
       (options.focus === "cancel" ? cancel : primary).focus();

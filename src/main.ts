@@ -158,6 +158,8 @@ const sidebar = createSidebar(
   document.querySelector<HTMLElement>("#sidebar")!,
   document.querySelector<HTMLElement>("#app")!,
   (note) => void openPath(note.path),
+  (note) => void trashDraft(note),
+  (note) => startRenameOf(note),
 );
 
 const switcher = createSwitcher(
@@ -165,7 +167,7 @@ const switcher = createSwitcher(
   () => editor.focus(),
 );
 
-const renamePrompt = createRenamePrompt(renameCurrent, () => editor.focus());
+const renamePrompt = createRenamePrompt(renameChosen, () => editor.focus());
 
 const shortcutsHelp = createShortcutsHelp(() => editor.focus());
 const aboutDialog = createAboutDialog(() => editor.focus());
@@ -363,6 +365,42 @@ async function changeNotesDir() {
   }
 }
 
+/**
+ * Moves a draft to the system trash after asking. If it is the open draft, pending edits are
+ * saved first (so the trashed copy is the latest text) and the editor is replaced by a blank
+ * draft; the file is never written again, so it can't come back.
+ */
+async function trashDraft(note: api.NoteMeta) {
+  if (note.path === settingsPath) return;
+  const picked = await ask({
+    message: `Move “${note.name}” to the trash?`,
+    primary: "Move to trash",
+    cancel: "Cancel",
+    focus: "cancel",
+  });
+  if (picked !== "primary") return;
+  try {
+    const isOpen = note.path === current.path;
+    if (isOpen) await autosave.flush(false);
+    await api.trashNote(note.path);
+    if (isOpen) resetToBlank();
+    await refreshSidebar();
+    toast(`Moved “${note.name}” to the trash`);
+  } catch (e) {
+    toast(`Couldn't move it to the trash: ${errorMessage(e)}`);
+  }
+}
+
+/** A draft chosen in the sidebar that is not the open one; null means "the open draft". */
+let renameTarget: api.NoteMeta | null = null;
+
+/** Renames the draft the prompt was opened for. */
+async function renameChosen(stem: string) {
+  if (renameTarget === null) return renameCurrent(stem);
+  await api.renameNote(renameTarget.path, stem);
+  await refreshSidebar();
+}
+
 async function renameCurrent(stem: string) {
   if (current.path === null) throw new Error("Nothing to rename yet");
   await autosave.flush(false);
@@ -372,7 +410,16 @@ async function renameCurrent(stem: string) {
   await refreshSidebar();
 }
 
+/** Rename from the sidebar menu: the open draft takes the normal path, any other is renamed as is. */
+function startRenameOf(note: api.NoteMeta) {
+  if (note.path === current.path) return startRename();
+  renameTarget = note;
+  const dot = note.name.lastIndexOf(".");
+  renamePrompt.open(dot > 0 ? note.name.slice(0, dot) : note.name);
+}
+
 function startRename() {
+  renameTarget = null;
   if (current.path !== null && current.path === settingsPath) {
     toast("The settings file can't be renamed");
     return;

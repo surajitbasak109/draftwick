@@ -202,6 +202,21 @@ pub fn is_inside(dir: &Path, path: &Path) -> bool {
     }
 }
 
+/// Checks that `path` is a draft the sidebar could have listed: an existing `.md`/`.txt` file
+/// directly inside `dir`. Deleting is the one thing that can't be undone by the app, so it is
+/// stricter than reading (no subfolders, no files from elsewhere, no `..` or symlink tricks).
+pub fn check_deletable(dir: &Path, path: &Path) -> AppResult<()> {
+    require_note_ext(path)?;
+    let in_dir = matches!(
+        (fs::canonicalize(dir), path.parent().map(fs::canonicalize)),
+        (Ok(dir), Some(Ok(parent))) if parent == dir
+    );
+    if !in_dir || !path.is_file() {
+        return Err(AppError::msg("That isn't a draft in the draft directory"));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn is_in_notes_dir(app: AppHandle, path: String) -> AppResult<bool> {
     Ok(is_inside(&config::notes_dir(&app)?, Path::new(&path)))
@@ -246,6 +261,14 @@ pub fn create_note(app: AppHandle, content: String) -> AppResult<NoteMeta> {
 #[tauri::command]
 pub fn rename_note(path: String, new_stem: String) -> AppResult<NoteMeta> {
     rename_in(Path::new(&path), &new_stem)
+}
+
+/// Moves a draft to the system trash, so a mistake can be undone from there. Never a permanent delete.
+#[tauri::command]
+pub fn trash_note(app: AppHandle, path: String) -> AppResult<()> {
+    let path = Path::new(&path);
+    check_deletable(&config::notes_dir(&app)?, path)?;
+    trash::delete(path).map_err(|e| AppError::msg(format!("Couldn't move it to the trash: {e}")))
 }
 
 #[cfg(test)]
@@ -447,5 +470,30 @@ mod tests {
 
         write_at(&path, "saved again", true).unwrap();
         assert_eq!(fs::read_to_string(&path).unwrap(), "saved again");
+    }
+
+    #[test]
+    fn only_listed_drafts_can_be_trashed() {
+        let root = tempfile::tempdir().unwrap();
+        let notes = root.path().join("notes");
+        fs::create_dir(&notes).unwrap();
+        fs::create_dir(notes.join("sub")).unwrap();
+        let ok = notes.join("a.md");
+        fs::write(&ok, "x").unwrap();
+        fs::write(notes.join("b.txt"), "x").unwrap();
+        fs::write(notes.join("evil.sh"), "x").unwrap();
+        fs::write(notes.join("sub").join("c.md"), "x").unwrap();
+        let outside = root.path().join("outside.md");
+        fs::write(&outside, "x").unwrap();
+        fs::create_dir(notes.join("folder.md")).unwrap();
+
+        assert!(check_deletable(&notes, &ok).is_ok());
+        assert!(check_deletable(&notes, &notes.join("b.txt")).is_ok());
+        assert!(check_deletable(&notes, &notes.join("evil.sh")).is_err());
+        assert!(check_deletable(&notes, &notes.join("sub").join("c.md")).is_err());
+        assert!(check_deletable(&notes, &outside).is_err());
+        assert!(check_deletable(&notes, &notes.join("..").join("outside.md")).is_err());
+        assert!(check_deletable(&notes, &notes.join("folder.md")).is_err());
+        assert!(check_deletable(&notes, &notes.join("gone.md")).is_err());
     }
 }
