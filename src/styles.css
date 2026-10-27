@@ -174,7 +174,8 @@ body {
 
 #switcher,
 #rename,
-#choice {
+#choice,
+#help {
   position: fixed;
   inset: 0;
   display: flex;
@@ -186,7 +187,8 @@ body {
 
 #switcher[hidden],
 #rename[hidden],
-#choice[hidden] {
+#choice[hidden],
+#help[hidden] {
   display: none;
 }
 
@@ -305,4 +307,61 @@ body {
   color: var(--muted);
   background: transparent;
   border: 0;
+}
+
+/* ---------- Help > Keyboard shortcuts ---------- */
+
+#help .panel {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+#help h2 {
+  margin: 0;
+  padding: 16px 18px 4px;
+  font-size: 17px;
+}
+
+#help-body {
+  padding: 0 18px;
+}
+
+#help h3 {
+  margin: 14px 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#help dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 24px;
+  margin: 0;
+}
+
+#help dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: right;
+}
+
+#help .actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 18px 16px;
+}
+
+#help button {
+  padding: 7px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }

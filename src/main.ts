@@ -1,11 +1,14 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { toCombo } from "./accelerators";
 import * as api from "./api";
 import { createAutosave } from "./autosave";
 import { createChoicePrompt, type Choice, type ChoiceOptions } from "./choice";
 import { createEditor } from "./editor";
 import { detectEol, eolName } from "./lineEndings";
 import { createRenamePrompt } from "./rename";
+import { createShortcutsHelp } from "./shortcutsHelp";
 import { createSidebar } from "./sidebar";
 import { createSwitcher } from "./switcher";
 import { installShortcuts } from "./shortcuts";
@@ -152,6 +155,8 @@ const switcher = createSwitcher(
 );
 
 const renamePrompt = createRenamePrompt(renameCurrent, () => editor.focus());
+
+const shortcutsHelp = createShortcutsHelp(() => editor.focus());
 
 async function refreshSidebar() {
   try {
@@ -403,24 +408,53 @@ function runWelcome(): Promise<void> {
 
 // ---------- boot ----------
 
-// Shortcuts do nothing while the welcome screen is up (there is no notes folder yet), or
-// while the unsaved-changes prompt is waiting for an answer.
 let ready = false;
-const whenReady = (action: () => void) => () => {
-  if (ready && !promptOpen) action();
+/** The action table kept in Rust (menu.rs): what the menu and the shortcuts are built from. */
+let actionTable: api.ActionInfo[] = [];
+
+/** What each action in the table does. Menu clicks and keyboard shortcuts both end up here. */
+const handlers: Record<string, () => void> = {
+  new: () => void newNote(),
+  open: () => void openWithDialog(),
+  save: () => void autosave.flush(),
+  close: () => void newNote(), // closes the note and shows a blank one; the window stays open
+  quick_switcher: () => switcher.open(notes),
+  toggle_sidebar: () => sidebar.toggle(),
+  change_folder: () => void changeNotesDir(),
+  rename: () => startRename(),
+  shortcuts: () => shortcutsHelp.open(actionTable),
 };
 
+/**
+ * Runs an action by id. Ignored while a prompt waits for an answer, and, for actions that need
+ * a notes folder, while the welcome screen is up.
+ */
+function runAction(id: string) {
+  const action = handlers[id];
+  const info = actionTable.find((a) => a.id === id);
+  if (!action || !info || promptOpen) return;
+  if (info.needs_folder && !ready) return;
+  action();
+}
+
 async function boot() {
-  installShortcuts({
-    "Mod+n": whenReady(() => void newNote()),
-    "Mod+o": whenReady(() => void openWithDialog()),
-    "Mod+s": whenReady(() => void autosave.flush()),
-    "Mod+p": whenReady(() => switcher.open(notes)),
-    "Mod+b": whenReady(() => sidebar.toggle()),
-    "Mod+,": whenReady(() => void changeNotesDir()),
-    "Mod+shift+r": whenReady(() => startRename()),
-    "Mod+w": whenReady(() => void newNote()),
-  });
+  actionTable = await api.getActions();
+
+  // A shortcut whose action has a native menu item is owned by that item's accelerator. Binding
+  // it here as well would make it fire twice, so only the rest are bound in the frontend.
+  const keys: Record<string, () => void> = {};
+  for (const action of actionTable) {
+    if (action.accelerator !== null && action.menu === null) {
+      keys[toCombo(action.accelerator)] = () => runAction(action.id);
+    }
+  }
+  installShortcuts(keys);
+
+  try {
+    await listen<string>("menu-action", (event) => runAction(event.payload));
+  } catch (e) {
+    toast(`The menu is unavailable: ${errorMessage(e)}`);
+  }
 
   // Save notes (or ask about outside files) before the window goes away. Cancelling the prompt
   // keeps the window open. A failure to register this hook must not stop the app starting.
@@ -446,6 +480,8 @@ async function boot() {
 
   document.querySelector<HTMLElement>("#app")!.hidden = false;
   ready = true;
+  // The menu items that need a notes folder start greyed out; switch them on now there is one.
+  await api.setMenuEnabled(true).catch((e) => toast(`Couldn't enable the menu: ${errorMessage(e)}`));
   await refreshSidebar();
   await newNote();
 }

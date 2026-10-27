@@ -173,7 +173,7 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 - Set `productName`, `identifier` (`dev.draftwick.app`), version `0.1.0`, and an app icon (`pnpm tauri icon <png>`; a simple generated placeholder is fine).
 - **Done when:** the `.deb` installs on Ubuntu, Draftwick appears in the app launcher, and launches.
 
-### M7: Menubar (planned, not started)
+### M7: Menubar (built; needs a check in the real window, see below)
 Add a menubar. **The menus and items below were specified by the user** and are requirements:
 
 - **File**
@@ -198,7 +198,7 @@ How the specified items map onto what already exists (each is just another way t
 Rules for the menubar:
 - **Consent rule applies.** A menu item only runs when the user clicks it or presses its shortcut. Opening a menu never triggers a dialog, a save, or a file change.
 - Show each item's shortcut next to it, and keep menu actions and shortcuts on **one code path** so they can't drift apart.
-- Menus do nothing on the welcome screen (same as shortcuts), because there is no notes folder yet.
+- File actions do nothing on the welcome screen (same as shortcuts), because there is no notes folder yet. Help stays available there, since it needs no folder.
 - "Keyboard shortcuts" is generated from the same table as the real shortcut map, so the list can't go stale.
 
 **Suggestions, not decided** (adopt, change, or drop; none of these are requirements):
@@ -208,8 +208,7 @@ Rules for the menubar:
 
 **Decided: native Tauri menu** (`tauri::menu`), not an in-app HTML menubar. It follows each platform's conventions and works with the macOS global menu bar.
 
-**Still open for the user:**
-- **What should File → Close do?** As written it closes the *note* (like `Ctrl+W`). If it should close the *window*, add a separate Quit item.
+**Decided: File → Close closes the note** (like `Ctrl+W`): it shows a new blank note and the window stays open. There is no Quit item yet; the window's own close button quits.
 
 **What "native" means for the implementation** (so the "one code path" rule still holds):
 - **The menu is built in Rust** (`.menu(...)` on the Tauri builder, handled in `on_menu_event`). It needs no JS permissions beyond the existing event access.
@@ -217,9 +216,15 @@ Rules for the menubar:
 - **One table is the source of truth, and it lives in Rust:** each entry has an `id`, a label and an accelerator. Rust builds the menu from it and exposes it through a command, so Help → Keyboard shortcuts lists what is really bound and the frontend's shortcut map is built from the same data.
 - **Accelerators can swallow keys.** A GTK menu accelerator may consume the key press before the webview sees it. This must be checked on Ubuntu when building: each shortcut must fire exactly once (not zero times, not twice), including while the editor has focus. Don't give a menu item an accelerator that clashes with a CodeMirror key until that is confirmed.
 - **Edit menu items must drive CodeMirror**, not the webview's built-in undo/copy/paste. CodeMirror keeps its own undo history, so Undo/Redo/Find/Replace items should emit events that run the editor commands.
-- **Inert on the welcome screen:** the frontend tells Rust when a notes folder exists, and Rust enables or disables the items (`set_enabled`), so they are visibly greyed out, not just ignored.
+- **Inert on the welcome screen:** items that need a notes folder start greyed out; the frontend calls `set_menu_enabled(true)` once a folder exists. The frontend also ignores the action itself, as a second guard.
 - **About:** use the native About dialog (`PredefinedMenuItem::about` with name, version, description) rather than a custom window.
 - **Testing:** the frontend half (id → action, welcome-screen guard) can still be tested in the browser with the stand-in backend; the native menu itself can only be checked in the real window.
+
+**What was built:** `src-tauri/src/menu.rs` (the action table, the menu, the event bridge, `get_actions`, `set_menu_enabled`); `accelerators.ts`, `shortcutsHelp.ts`, and a single `runAction(id)` in `main.ts` that both menu clicks and key presses go through.
+
+**Who owns each key (so it fires exactly once):** an action with a menu item (Open `Ctrl+O`, Save `Ctrl+S`, Close `Ctrl+W`) is handled by the native accelerator only; the frontend does not bind it. Actions without a menu item (New note, Go to note, Toggle sidebar, Change notes folder, Rename) are bound by the frontend only. Moving an action into a menu is a one-line change to its `menu` field in the table.
+
+**Still to verify in the real window on Ubuntu** (cannot be checked in a browser): every native accelerator fires once while the editor has focus; File items are greyed out on the welcome screen; About opens the native dialog. A debug build prints `[menu] <id>` to the terminal for each native menu event.
 
 - **Done when:** the native menus above exist, every item does exactly what its shortcut does (and each shortcut still fires exactly once), menus are greyed out on the welcome screen, and Help → Keyboard shortcuts lists the real shortcuts.
 

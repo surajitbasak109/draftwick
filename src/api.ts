@@ -36,6 +36,20 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
   }
 }
 
+/** One entry of the action table kept in Rust (menu.rs): what the menu and shortcuts are built from. */
+export interface ActionInfo {
+  id: string;
+  label: string;
+  /** Tauri accelerator syntax, e.g. "CmdOrCtrl+Shift+R"; null when there is no shortcut. */
+  accelerator: string | null;
+  /** The native menu that shows it. null means keyboard shortcut only, handled by the frontend. */
+  menu: string | null;
+  needs_folder: boolean;
+}
+
+export const getActions = () => call<ActionInfo[]>("get_actions");
+/** Greys the menu items that need a notes folder in or out. */
+export const setMenuEnabled = (enabled: boolean) => call<void>("set_menu_enabled", { enabled });
 export const getConfig = () => call<Config>("get_config");
 export const setNotesDir = (path: string) => call<Config>("set_notes_dir", { path });
 export const defaultNotesDir = () => call<string>("default_notes_dir");
