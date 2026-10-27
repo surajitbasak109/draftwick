@@ -541,6 +541,56 @@ body {
   border: 0;
 }
 
+/* ---------- shared header for the About and Keyboard shortcuts dialogs ---------- */
+
+.dialog-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 52px;
+  background: var(--bg-side);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--ui);
+}
+
+.dialog-title {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--menu-hover);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.dialog-close:hover {
+  background: var(--selection);
+}
+
+.dialog-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 /* ---------- Help > Keyboard shortcuts ---------- */
 
 #help .panel {
@@ -548,14 +598,8 @@ body {
   overflow-y: auto;
 }
 
-#help h2 {
-  margin: 0;
-  padding: 16px 18px 4px;
-  font-size: 17px;
-}
-
 #help-body {
-  padding: 0 18px;
+  padding: 0 18px 18px;
 }
 
 #help h3 {
@@ -581,28 +625,16 @@ body {
   text-align: right;
 }
 
-#help .actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 14px 18px 16px;
-}
-
-#help button {
-  padding: 7px 16px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 /* ---------- Help > About ---------- */
 
 #about .panel {
   width: min(380px, 90vw);
   text-align: center;
+}
+
+#about,
+#help {
+  outline: none;
 }
 
 #about h2 {
@@ -619,24 +651,8 @@ body {
 }
 
 #about-description {
+  padding-bottom: 26px;
   color: var(--fg);
-}
-
-#about .actions {
-  display: flex;
-  justify-content: center;
-  padding: 18px 18px 22px;
-}
-
-#about button {
-  padding: 7px 22px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 /* ---------- sidebar right-click menu ---------- */

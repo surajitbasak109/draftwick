@@ -11,18 +11,21 @@ export function createAboutDialog(onClose: () => void): AboutDialog {
   const description = document.querySelector<HTMLElement>("#about-description")!;
   const close = document.querySelector<HTMLButtonElement>("#about-close")!;
 
+  // Esc closes the dialog wherever the focus is (clicking the text moves it off the dialog).
+  function onKey(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      hide();
+    }
+  }
+
   function hide() {
+    document.removeEventListener("keydown", onKey, true);
     root.hidden = true;
     onClose();
   }
 
   close.addEventListener("click", hide);
-  root.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      hide();
-    }
-  });
   root.addEventListener("mousedown", (e) => {
     if (e.target === root) hide();
   });
@@ -33,7 +36,10 @@ export function createAboutDialog(onClose: () => void): AboutDialog {
       version.textContent = `Version ${info.version}`;
       description.textContent = info.description;
       root.hidden = false;
-      close.focus();
+      document.addEventListener("keydown", onKey, true);
+      // Keep typing out of the editor behind the dialog.
+      root.tabIndex = -1;
+      root.focus();
     },
   };
 }

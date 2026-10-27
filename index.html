@@ -46,23 +46,24 @@
         </div>
       </div>
     </div>
-    <div id="about" hidden role="dialog" aria-labelledby="about-name">
+    <div id="about" hidden role="dialog" aria-labelledby="about-title">
       <div class="panel">
+        <div class="dialog-head">
+          <span id="about-title" class="dialog-title">About Draftwick</span>
+          <button id="about-close" class="dialog-close" type="button" aria-label="Close" title="Close (Esc)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
         <h2 id="about-name"></h2>
         <p id="about-version"></p>
         <p id="about-description"></p>
-        <div class="actions">
-          <button id="about-close" class="primary" type="button">Close</button>
-        </div>
       </div>
     </div>
     <div id="help" hidden role="dialog" aria-labelledby="help-title">
       <div class="panel">
-        <h2 id="help-title">Keyboard shortcuts</h2>
-        <div id="help-body"></div>
-        <div class="actions">
-          <button id="help-close" class="primary" type="button">Close</button>
+        <div class="dialog-head">
+          <span id="help-title" class="dialog-title">Keyboard shortcuts</span>
+          <button id="help-close" class="dialog-close" type="button" aria-label="Close" title="Close (Esc)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
+        <div id="help-body"></div>
       </div>
     </div>
     <div id="rename" hidden>
