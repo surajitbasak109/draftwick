@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 use crate::error::{AppError, AppResult};
 use crate::notes::atomic_write;
@@ -55,10 +55,19 @@ fn update(dir: &Path, change: impl FnOnce(&mut Config)) -> AppResult<Config> {
     Ok(config)
 }
 
-fn config_dir(app: &AppHandle) -> AppResult<PathBuf> {
-    app.path()
-        .app_config_dir()
-        .map_err(|e| AppError::msg(format!("Can't find the config folder: {e}")))
+/// Folder name inside the platform's config directory (`~/.config/draftwick` on Linux).
+const APP_DIR: &str = "draftwick";
+
+fn dir_in(base: &Path) -> PathBuf {
+    base.join(APP_DIR)
+}
+
+/// The one folder that holds `config.json` (the app's own state) and `settings.json` (the user's).
+/// It is only computed here, never created: folders appear when something is first saved.
+pub fn config_dir(_app: &AppHandle) -> AppResult<PathBuf> {
+    dirs::config_dir()
+        .map(|base| dir_in(&base))
+        .ok_or_else(|| AppError::msg("Can't find the config folder"))
 }
 
 pub fn notes_dir(app: &AppHandle) -> AppResult<PathBuf> {
@@ -104,6 +113,11 @@ pub fn default_notes_dir() -> AppResult<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn config_folder_is_draftwick_inside_the_base() {
+        assert_eq!(dir_in(Path::new("/home/u/.config")), Path::new("/home/u/.config/draftwick"));
+    }
 
     #[test]
     fn missing_config_is_default() {

@@ -19,7 +19,7 @@ A small cross-platform desktop editor for quick drafts (meeting notes, pasted ch
 ## Commands
 
 - `pnpm install`
-- `pnpm tauri dev` runs the app. The dev server port is fixed at 1420. Changing a Rust file rebuilds and restarts the window. To test without touching the user's real settings, give it a throwaway config folder: `XDG_CONFIG_HOME=/tmp/draftwick-xdg pnpm tauri dev` (the app's files then live in `$XDG_CONFIG_HOME/dev.draftwick.app/`).
+- `pnpm tauri dev` runs the app. The dev server port is fixed at 1420. Changing a Rust file rebuilds and restarts the window. To test without touching the user's real settings, give it a throwaway config folder: `XDG_CONFIG_HOME=/tmp/draftwick-xdg pnpm tauri dev` (the app's files then live in `$XDG_CONFIG_HOME/draftwick/`; on a normal run that is `~/.config/draftwick/`).
 - `pnpm typecheck`, `pnpm build`, and `pnpm test` (Node's built-in runner over `tests/*.test.mjs`; it imports `src/*.ts` directly).
 - `cd src-tauri && cargo test`. If `cargo` is not found, run `source ~/.cargo/env` first.
 - Before finishing a change: typecheck, build, `pnpm test` and `cargo test` should all pass.

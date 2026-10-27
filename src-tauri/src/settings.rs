@@ -15,8 +15,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
+use crate::config::config_dir;
 use crate::error::{AppError, AppResult};
 use crate::notes::atomic_write;
 
@@ -559,12 +560,6 @@ fn ensure_file(dir: &Path) -> AppResult<PathBuf> {
     Ok(path)
 }
 
-fn config_dir(app: &AppHandle) -> AppResult<PathBuf> {
-    app.path()
-        .app_config_dir()
-        .map_err(|e| AppError::msg(format!("Can't find the config folder: {e}")))
-}
-
 /// Checks the text of the settings file as it is being edited, so the editor can underline
 /// mistakes while the user types. It uses exactly the rules the app applies when it reads the file.
 #[tauri::command]
@@ -964,14 +959,14 @@ mod tests {
 
     #[test]
     fn only_the_exact_settings_path_counts_as_the_settings_file() {
-        let dir = Path::new("/home/u/.config/dev.draftwick.app");
+        let dir = Path::new("/home/u/.config/draftwick");
         assert!(is_settings_path(dir, &dir.join("settings.json")));
         assert!(!is_settings_path(dir, &dir.join("config.json")));
         assert!(!is_settings_path(dir, &dir.join("sub").join("settings.json")));
         assert!(!is_settings_path(dir, Path::new("/home/u/settings.json")));
         assert!(!is_settings_path(dir, Path::new("/etc/passwd")));
         // a path that merely resolves to the file does not count
-        assert!(!is_settings_path(dir, &dir.join("..").join("dev.draftwick.app").join("settings.json")));
+        assert!(!is_settings_path(dir, &dir.join("..").join("draftwick-old").join("settings.json")));
     }
 
     #[test]

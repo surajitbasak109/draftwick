@@ -26,8 +26,9 @@ The agent cannot see or click the real window, so these are yours. Everything be
 
 ## M6: packaging
 
-- [ ] `pnpm tauri build` produces the `.deb` and the AppImage.
-- [ ] Install the `.deb` on Ubuntu: Draftwick appears in the launcher and starts.
+- [x] `pnpm tauri build` produces the `.deb` (2.1 MiB) and the AppImage (84.5 MiB); both built on 2026-10-27.
+- [ ] **Snap package (on hold: ask the user again when they bring up snap).** Decisions to put to them then: (1) may the agent install `snapcraft`, which needs LXD or Multipass, or `--destructive-mode` to build on this machine (suggested: `sudo snap install snapcraft --classic` plus LXD); (2) confinement: strict with the `home` interface (suggested; a draft directory outside the home folder would be blocked) or `classic` (needs a manual Snap Store review); (3) a local `.snap` file only (suggested) or publishing to the Snap Store (never without being asked). Also needs a `snap/snapcraft.yaml` in the repo.
+- [ ] Install the `.deb` on Ubuntu: Draftwick appears in the launcher and starts. Built, needs your check. Also run the AppImage once.
 - [ ] Measure start-up (target under 500 ms on a warm start) and idle memory (under 150 MB); write the numbers into `.claude/PLAN.md`.
 - [ ] Turn the content-security policy on (it is `null` now) and check that the app and `pnpm tauri dev` still work.
 - [ ] Replace the generated placeholder icon with a real one.
