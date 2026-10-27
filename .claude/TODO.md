@@ -40,7 +40,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 ## Menu items held back (see M7 in `.claude/PLAN.md` for the reasons)
 
 - [ ] **File > Save as…** (`Ctrl+Shift+S`). Medium: save dialog, `.md` or `.txt` only, the open draft switches to the new path, the old file is left alone.
-- [ ] **Edit > Undo, Redo.** Easy, but they must be click-only items (no menu accelerator), or `Ctrl+Z` would be taken inside the small text boxes. Needs a display-only shortcut hint in the action table.
+- [x] **Edit > Undo, Redo.** A new Edit menu with click-only Undo and Redo (no accelerator, so `Ctrl+Z` and `Ctrl+Shift+Z` still go to whatever has focus). Checked by the user on 2026-10-27. Not done: a display-only shortcut hint beside the item.
 - [ ] **Edit > Cut, Copy.** Clipboard access from a menu click may be refused by the web view; needs proving in the real window, or a clipboard plugin.
 - [ ] **Edit > Copy as HTML.** Needs a Markdown to HTML renderer, sanitising, and writing both HTML and plain text to the clipboard.
 - [ ] **View > Toggle wrap.** Easy; decide together with the word wrap column setting.

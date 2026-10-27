@@ -1,6 +1,6 @@
 import { Compartment, EditorSelection, EditorState, countColumn, type Extension } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, lineNumbers } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentLess, indentMore } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentLess, indentMore, redo, undo } from "@codemirror/commands";
 import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -67,6 +67,9 @@ export interface EditorHandle {
   /** True when the document has no text at all. */
   isEmpty(): boolean;
   focus(): void;
+  /** Undo and redo the last edit (the Edit menu); the editor keeps focus. */
+  undo(): void;
+  redo(): void;
   /** Re-measures the text after the font or the wrap width changed. */
   refreshLayout(): void;
   /** Applies line numbers and tab settings to the open document and to the ones opened later. */
@@ -237,6 +240,14 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
     getDoc: () => view.state.doc.sliceString(0, view.state.doc.length, eol),
     isEmpty: () => view.state.doc.length === 0,
     focus: () => view.focus(),
+    undo() {
+      undo(view);
+      view.focus();
+    },
+    redo() {
+      redo(view);
+      view.focus();
+    },
     refreshLayout: () => view.requestMeasure(),
     setOptions(next) {
       options = next;

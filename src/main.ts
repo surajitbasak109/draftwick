@@ -521,6 +521,8 @@ const handlers: Record<string, () => void> = {
   shortcuts: () => shortcutsHelp.open(actionTable),
   open_settings: () => void openSettingsFile(),
   reload_settings: () => void applySettings(true),
+  undo: () => editor.undo(),
+  redo: () => editor.redo(),
 };
 
 /** Keeps the tick on View > Show sidebar in step with the sidebar. */

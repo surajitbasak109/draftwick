@@ -56,7 +56,7 @@ impl Action {
 }
 
 /// Top-level menus, in display order.
-const MENUS: [&str; 4] = ["File", "View", "Settings", "Help"];
+const MENUS: [&str; 5] = ["File", "Edit", "View", "Settings", "Help"];
 
 pub const ACTIONS: &[Action] = &[
     // ---- File ----
@@ -75,6 +75,12 @@ pub const ACTIONS: &[Action] = &[
     // Quits through the window's normal close path, so unsaved work is still asked about. It
     // works on the welcome screen too, where there is nothing to save.
     Action::new("quit", "Quit", Some("CmdOrCtrl+Q"), Some("File"), false),
+    // ---- Edit ----
+    // Click-only, with no accelerator: Ctrl+Z and Ctrl+Y still belong to whatever has focus (the
+    // editor, or a small text box such as rename), and a native accelerator would take them from the
+    // text box and apply them to the editor.
+    Action::new("undo", "Undo", None, Some("Edit"), true),
+    Action::new("redo", "Redo", None, Some("Edit"), true),
     // ---- View ----
     // Shows a tick while the sidebar is visible; the frontend keeps the tick in step.
     Action::new("toggle_sidebar", "Show sidebar", Some("CmdOrCtrl+B"), Some("View"), true).ticked(),
@@ -268,6 +274,7 @@ mod tests {
             menu_labels("File"),
             ["New file", "Open", "Open/Set draft directory", "Save", "Close", "Quit"]
         );
+        assert_eq!(menu_labels("Edit"), ["Undo", "Redo"]);
         assert_eq!(menu_labels("View"), ["Show sidebar"]);
         assert_eq!(menu_labels("Settings"), ["Open settings file", "Reload settings"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
@@ -291,10 +298,10 @@ mod tests {
 
     #[test]
     fn items_in_a_menu_that_have_no_shortcut_are_still_reachable() {
-        // The Help and Settings items are menu-only; every other menu item must also have a
-        // shortcut.
+        // The Help and Settings items are menu-only, and the Edit items are click-only on purpose
+        // (see the Edit section of the table); every other menu item must also have a shortcut.
         for action in ACTIONS.iter().filter(|a| a.menu.is_some()) {
-            if !matches!(action.menu, Some("Help") | Some("Settings")) {
+            if !matches!(action.menu, Some("Help") | Some("Settings") | Some("Edit")) {
                 assert!(action.accelerator.is_some(), "{} has no shortcut", action.id);
             }
         }
