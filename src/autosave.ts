@@ -1,7 +1,13 @@
 export interface Autosave {
-  /** Call on every user edit; schedules a save after the debounce delay. */
+  /**
+   * Call on every user edit. Marks the document dirty and, if autosave is enabled for it,
+   * schedules a save after the debounce delay.
+   */
   touch(): void;
-  /** Save now if there are unsaved edits, and wait for any save already in flight. */
+  /**
+   * Save now if there are unsaved edits, and wait for any save already in flight. This is an
+   * explicit save, so it works even when autosave is disabled for the document.
+   */
   flush(): Promise<void>;
   /** Forget pending edits, e.g. right after loading a different document. */
   markClean(): void;
@@ -10,6 +16,8 @@ export interface Autosave {
 
 interface Options {
   delayMs: number;
+  /** Whether edits to the current document may be saved without the user asking. */
+  isEnabled: () => boolean;
   save: () => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
   onError: (error: unknown) => void;
@@ -48,7 +56,7 @@ export function createAutosave(opts: Options): Autosave {
       version++;
       setDirty(true);
       clearTimeout(timer);
-      timer = setTimeout(runSave, opts.delayMs);
+      if (opts.isEnabled()) timer = setTimeout(runSave, opts.delayMs);
     },
     flush() {
       clearTimeout(timer);

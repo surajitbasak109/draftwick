@@ -183,6 +183,20 @@ pub fn rename_in(path: &Path, new_stem: &str) -> AppResult<NoteMeta> {
     meta_for(&target)
 }
 
+/// True when `path` is inside `dir` (at any depth). Both are canonicalized, so `..` tricks and
+/// symlinks pointing out of the folder don't count as "inside". Missing paths are never inside.
+pub fn is_inside(dir: &Path, path: &Path) -> bool {
+    match (fs::canonicalize(dir), fs::canonicalize(path)) {
+        (Ok(dir), Ok(path)) => path.starts_with(dir),
+        _ => false,
+    }
+}
+
+#[tauri::command]
+pub fn is_in_notes_dir(app: AppHandle, path: String) -> AppResult<bool> {
+    Ok(is_inside(&config::notes_dir(&app)?, Path::new(&path)))
+}
+
 #[tauri::command]
 pub fn list_notes(app: AppHandle) -> AppResult<Vec<NoteMeta>> {
     list_in(&config::notes_dir(&app)?)
@@ -332,6 +346,45 @@ mod tests {
             .map(|n| n.name)
             .collect();
         assert_eq!(names, ["new.txt", "mid.md", "old.md"]);
+    }
+
+    #[test]
+    fn is_inside_accepts_files_at_any_depth() {
+        let dir = tempfile::tempdir().unwrap();
+        let top = dir.path().join("a.md");
+        fs::write(&top, "x").unwrap();
+        fs::create_dir(dir.path().join("sub")).unwrap();
+        let nested = dir.path().join("sub").join("b.md");
+        fs::write(&nested, "x").unwrap();
+        assert!(is_inside(dir.path(), &top));
+        assert!(is_inside(dir.path(), &nested));
+    }
+
+    #[test]
+    fn is_inside_rejects_outside_siblings_and_missing_files() {
+        let root = tempfile::tempdir().unwrap();
+        let notes = root.path().join("notes");
+        let lookalike = root.path().join("notes-other"); // shares a name prefix
+        fs::create_dir(&notes).unwrap();
+        fs::create_dir(&lookalike).unwrap();
+        let outside = lookalike.join("c.md");
+        fs::write(&outside, "x").unwrap();
+        assert!(!is_inside(&notes, &outside));
+        assert!(!is_inside(&notes, &notes.join("missing.md")));
+        assert!(!is_inside(&root.path().join("no-such-dir"), &outside));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn is_inside_rejects_symlinks_that_point_outside() {
+        let root = tempfile::tempdir().unwrap();
+        let notes = root.path().join("notes");
+        fs::create_dir(&notes).unwrap();
+        let target = root.path().join("elsewhere.md");
+        fs::write(&target, "x").unwrap();
+        let link = notes.join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        assert!(!is_inside(&notes, &link));
     }
 
     #[test]

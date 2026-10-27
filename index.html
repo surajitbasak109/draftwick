@@ -6,7 +6,19 @@
     <title>Draftwick</title>
   </head>
   <body>
-    <div id="app">
+    <section id="welcome" hidden>
+      <div class="welcome-card">
+        <h1>Welcome to Draftwick</h1>
+        <p>
+          Choose a folder where your notes will be saved. Each note is stored there as a
+          Markdown file named after the date and time you started it.
+        </p>
+        <button id="welcome-choose" class="primary" type="button">Choose notes folder…</button>
+        <button id="welcome-default" class="link" type="button">Use ~/Notes instead</button>
+        <p id="welcome-error" role="alert" hidden></p>
+      </div>
+    </section>
+    <div id="app" hidden>
       <aside id="sidebar" aria-label="Notes"></aside>
       <main id="editor"></main>
     </div>
@@ -15,6 +27,16 @@
       <div class="panel">
         <input id="switcher-input" type="text" placeholder="Go to note…" autocomplete="off" spellcheck="false" />
         <ul id="switcher-list"></ul>
+      </div>
+    </div>
+    <div id="unsaved" hidden role="alertdialog" aria-labelledby="unsaved-message">
+      <div class="panel">
+        <p id="unsaved-message"></p>
+        <div class="actions">
+          <button id="unsaved-save" class="primary" type="button">Save</button>
+          <button id="unsaved-discard" type="button">Don't Save</button>
+          <button id="unsaved-cancel" type="button">Cancel</button>
+        </div>
       </div>
     </div>
     <div id="rename" hidden>

@@ -31,6 +31,7 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 export const getConfig = () => call<Config>("get_config");
 export const setNotesDir = (path: string) => call<Config>("set_notes_dir", { path });
 export const defaultNotesDir = () => call<string>("default_notes_dir");
+export const isInNotesDir = (path: string) => call<boolean>("is_in_notes_dir", { path });
 export const listNotes = () => call<NoteMeta[]>("list_notes");
 export const readNote = (path: string) => call<string>("read_note", { path });
 export const writeNote = (path: string, content: string) =>

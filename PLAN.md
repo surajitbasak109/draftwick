@@ -20,10 +20,12 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 | File I/O | **Custom Rust commands** (not `tauri-plugin-fs` from JS) | The notes folder is picked at runtime; Rust commands avoid fs-scope config pain and keep naming logic testable |
 | Folder picker | `tauri-plugin-dialog` | Native folder dialog |
 | Config storage | JSON file in `app_config_dir()/config.json`, read/written by Rust | No extra plugin |
-| Cancel on folder prompt | Use **`~/Notes`** (create if missing) | Predictable default; "wiki page" has no meaning for a local app |
+| Consent rule | **Nothing happens without an explicit user action**: no system dialog on launch, no folder created unless the user asks | The user must never be surprised by a prompt or a silent change |
+| Folder choice | Welcome screen with **"Choose notes folder…"** (primary) and **"Use ~/Notes instead"** (secondary link); `~/Notes` is created only when that link is clicked | Replaces the earlier auto-dialog + silent `~/Notes` fallback |
 | New-note filename | **`YYYY-MM-DD HH-mm.md`** (local time), e.g. `2026-10-27 14-05.md` | `:` is illegal on Windows and shows oddly on macOS |
 | Filename collision | Append ` (2)`, ` (3)`, … before `.md` | Two notes in the same minute must not overwrite each other |
-| Saving | **Autosave** 500 ms after the last keystroke, plus on blur/close; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
+| Saving | **Autosave** 500 ms after the last keystroke, plus on blur/close, **only for notes inside the notes folder**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
+| Files outside the notes folder | **Never autosaved.** Saved only with `Ctrl+S`; leaving or closing with unsaved edits asks **Save / Don't Save / Cancel**. The title shows "(autosave off)" | Consent rule: don't write to a file the user opened from elsewhere unless they ask |
 | Theme | Dark by default, follows the OS `prefers-color-scheme` | |
 
 ---
@@ -31,12 +33,12 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 ## 2. Behavior spec
 
 ### First launch
-1. If `config.json` has no `notesDir`, show a native **folder picker** titled "Choose a folder for your notes" (the user can create a folder from inside the dialog).
-2. If a folder is chosen, save it as `notesDir`.
-3. If cancelled, set `notesDir = <home>/Notes`, create it if it doesn't exist, save it, and show a short non-blocking toast: "Saving notes to ~/Notes. Change in Settings (Ctrl+,)".
+1. If `config.json` has no `notesDir`, show a **welcome screen** instead of the editor. **No system dialog opens by itself.** Keyboard shortcuts do nothing while it is showing.
+2. **"Choose notes folder…"** opens the native folder picker (titled "Choose a folder for your notes"). If a folder is chosen, save it as `notesDir` and open the editor. If the picker is cancelled, the user simply stays on the welcome screen; nothing is saved or created.
+3. **"Use ~/Notes instead"** creates `<home>/Notes` if missing, saves it as `notesDir`, and opens the editor. This is the only path that creates a folder, and only on click.
 
 ### Every launch
-- Load `notesDir`. If it no longer exists, re-run the first-launch flow.
+- Load `notesDir`. If it no longer exists, show the welcome screen again.
 - Open a **new empty note** in the editor. **Don't create the file on disk until the first character is typed**, so there are no empty junk files.
 - The filename is fixed at the moment the file is first written (timestamp of first keystroke).
 
@@ -53,8 +55,8 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 ### Keyboard shortcuts
 | Keys | Action |
 |---|---|
-| `Ctrl+N` | New note (autosave the current one first) |
-| `Ctrl+O` | Open any `.md`/`.txt` file via native file dialog (may be outside `notesDir`) |
+| `Ctrl+N` | New note (autosaves the current one first; for an outside file with unsaved edits, asks Save / Don't Save / Cancel) |
+| `Ctrl+O` | Open any `.md`/`.txt` file via native file dialog (may be outside `notesDir`; outside files are not autosaved, see Saving) |
 | `Ctrl+S` | Save now |
 | `Ctrl+P` | Quick switcher: fuzzy filter over sidebar files, Enter to open |
 | `Ctrl+B` | Toggle sidebar |
@@ -63,7 +65,9 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 | `Ctrl+W` | Close current note (save first) → new empty note |
 
 ### Closing the app
-- Flush the pending autosave synchronously before the window closes (handle the Tauri `close-requested` event). Never show a "save changes?" dialog.
+- Notes inside the notes folder: flush the pending autosave before the window closes (handle the Tauri `close-requested` event), with no dialog.
+- A file from outside the notes folder with unsaved edits: keep the window open and ask **Save / Don't Save / Cancel**. Cancel keeps the window open; Save that fails also keeps it open.
+- Whether a file is "inside" is decided in Rust (`is_in_notes_dir`): both paths are canonicalized, so symlinks pointing out of the folder count as outside.
 
 ---
 
@@ -140,8 +144,8 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 - **Done when:** typing, undo, `Ctrl+F` search, and `Ctrl+D` multi-select work.
 
 ### M2: Config + first-launch flow
-- `config.rs`, `get_config`, `set_notes_dir`, `default_notes_dir`, plus the folder-picker / cancel → `~/Notes` flow and toast.
-- **Done when:** deleting `config.json` and relaunching shows the picker; cancelling creates `~/Notes`; relaunching doesn't ask again.
+- `config.rs`, `get_config`, `set_notes_dir`, `default_notes_dir`, plus the welcome screen with its two buttons.
+- **Done when:** deleting `config.json` and relaunching shows the welcome screen and opens **no** dialog; "Choose notes folder…" opens the picker and cancelling it leaves the welcome screen up; "Use ~/Notes instead" creates `~/Notes` and opens the editor; relaunching doesn't show the welcome screen again.
 
 ### M3: Create + autosave
 - `create_note`, `write_note`, `autosave.ts` (500 ms debounce, flush on blur, `Ctrl+S`, `close-requested`).

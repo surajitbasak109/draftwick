@@ -40,6 +40,11 @@
   box-sizing: border-box;
 }
 
+/* Author display rules (grid, flex) would otherwise override the [hidden] attribute. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -102,10 +107,74 @@ body {
   background: var(--selection);
 }
 
+/* ---------- first-launch welcome screen ---------- */
+
+#welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+}
+
+.welcome-card {
+  width: min(460px, 100%);
+  text-align: center;
+}
+
+.welcome-card h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.welcome-card p {
+  margin: 0 0 24px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.welcome-card button {
+  display: block;
+  margin: 0 auto;
+  font: inherit;
+  cursor: pointer;
+}
+
+.welcome-card button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.welcome-card .primary {
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.welcome-card .link {
+  margin-top: 14px;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.welcome-card #welcome-error {
+  margin: 18px 0 0;
+  color: #ef6b6b;
+}
+
 /* ---------- overlays: quick switcher + rename ---------- */
 
 #switcher,
-#rename {
+#rename,
+#unsaved {
   position: fixed;
   inset: 0;
   display: flex;
@@ -116,8 +185,39 @@ body {
 }
 
 #switcher[hidden],
-#rename[hidden] {
+#rename[hidden],
+#unsaved[hidden] {
   display: none;
+}
+
+#unsaved-message {
+  margin: 0;
+  padding: 18px 18px 6px;
+  line-height: 1.5;
+}
+
+#unsaved .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 16px;
+}
+
+#unsaved button {
+  padding: 7px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-side);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+#unsaved button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
 }
 
 .panel {

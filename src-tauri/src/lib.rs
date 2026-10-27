@@ -10,6 +10,7 @@ pub fn run() {
             config::get_config,
             config::set_notes_dir,
             config::default_notes_dir,
+            notes::is_in_notes_dir,
             notes::list_notes,
             notes::read_note,
             notes::write_note,
