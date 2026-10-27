@@ -91,18 +91,16 @@ test("trailing commas and comments after a value are fine", () => {
   assert.ok(!spans(text).some(([, cls]) => cls === "invalid"));
 });
 
-test("the real default settings file is all comments and braces, nothing flagged as an error", () => {
-  const rust = readFileSync(new URL("../src-tauri/src/settings.rs", import.meta.url), "utf8");
-  const match = rust.match(/const DEFAULT_FILE: &str = r#"([\s\S]*?)"#;/);
-  assert.ok(match, "could not find DEFAULT_FILE in settings.rs");
-  const s = spans(match[1]);
+test("the example settings file is all comments and braces, nothing flagged as an error", () => {
+  const example = readFileSync(new URL("../settings.example.jsonc", import.meta.url), "utf8");
+  const s = spans(example);
   const kinds = new Set(s.map(([, cls]) => cls));
   assert.deepEqual([...kinds].sort(), ["bracket", "comment"]);
   // the commented-out setting line is one comment, so it is not mistaken for a real property
   assert.ok(s.some(([piece, cls]) => cls === "comment" && piece.includes('"autosave_delay_ms": 5000')));
 
   // and uncommenting that line, as the file tells the user to, makes it a real property + number
-  const enabled = match[1].replace('// "autosave_delay_ms": 5000', '"autosave_delay_ms": 2000');
+  const enabled = example.replace('// "autosave_delay_ms": 5000', '"autosave_delay_ms": 2000');
   assert.equal(classOf(enabled, '"autosave_delay_ms"'), "property");
   assert.equal(classOf(enabled, "2000"), "number");
 });

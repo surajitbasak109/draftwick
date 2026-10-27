@@ -28,8 +28,13 @@
   color-scheme: dark;
 }
 
+/*
+ * Theme. Dark is the default above. With no override, the OS decides: light colours apply when it
+ * asks for light. The theme setting adds data-theme="dark" or "light" on <html> to force one.
+ * The light colours are written twice (CSS cannot share them between a media query and a selector).
+ */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     --bg: #ffffff;
     --bg-side: #f3f4f6;
     --fg: #24272b;
@@ -56,6 +61,34 @@
     --danger-bg: rgba(201, 55, 44, 0.09);
     color-scheme: light;
   }
+}
+
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-side: #f3f4f6;
+  --fg: #24272b;
+  --muted: #6b7280;
+  --border: #e1e3e8;
+  --accent: #2563eb;
+  --selection: #bcd5ff;
+  --match: #fde68a;
+  --hl-heading: #1d4ed8;
+  --hl-link: #0f766e;
+  --hl-code: #b45309;
+  --hl-muted: #6b7280;
+  --hl-property: #1d4ed8;
+  --hl-string: #15803d;
+  --hl-number: #b45309;
+  --hl-keyword: #7e22ce;
+  --hl-comment: #6b7280;
+  --toast-bg: #24272b;
+  --menu-bg: #ffffff;
+  --menu-border: #dcdfe5;
+  --menu-hover: #eef0f4;
+  --menu-shadow: 0 10px 30px rgba(20, 24, 33, 0.16), 0 2px 6px rgba(20, 24, 33, 0.08);
+  --danger: #c9372c;
+  --danger-bg: rgba(201, 55, 44, 0.09);
+  color-scheme: light;
 }
 
 * {

@@ -28,32 +28,43 @@ pub const AUTOSAVE_DELAY_DEFAULT_MS: u64 = 5_000;
 pub const AUTOSAVE_DELAY_MIN_MS: u64 = 500;
 pub const AUTOSAVE_DELAY_MAX_MS: u64 = 30_000;
 
-/// What a new settings file contains: every setting, commented out at its default.
-const DEFAULT_FILE: &str = r#"{
-  // Draftwick settings.
-  //
-  // Only the settings you want to change need to be listed here; anything missing uses its
-  // default. To change one, remove the "//" in front of it, edit the value, save this file, then
-  // choose Settings > Reload settings in Draftwick.
+/// What a new settings file contains: every setting, commented out at its default. The text lives
+/// in `settings.example.jsonc` at the project root, so it can be read (and compared with your own
+/// file) without running the app, and is built into the program from there.
+const DEFAULT_FILE: &str = include_str!("../../settings.example.jsonc");
 
-  // How long to wait after you stop typing before a draft is saved, in milliseconds.
-  // Every keystroke restarts the wait. Allowed range: 500 (half a second) to 30000 (30 seconds).
-  // A longer wait means fewer writes; a shorter one means less is lost if the app or the
-  // computer stops suddenly. Drafts are always saved when you switch drafts or quit.
-  // Default: 5000 (5 seconds).
-  // "autosave_delay_ms": 5000
+/// Which colours the window uses. `System` follows the operating system.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    #[default]
+    System,
+    Dark,
+    Light,
 }
-"#;
+
+impl Theme {
+    fn from_name(name: &str) -> Option<Theme> {
+        match name.trim().to_ascii_lowercase().as_str() {
+            "system" => Some(Theme::System),
+            "dark" => Some(Theme::Dark),
+            "light" => Some(Theme::Light),
+            _ => None,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Settings {
     pub autosave_delay_ms: u64,
+    pub theme: Theme,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Settings {
             autosave_delay_ms: AUTOSAVE_DELAY_DEFAULT_MS,
+            theme: Theme::default(),
         }
     }
 }
@@ -504,6 +515,15 @@ fn analyze(text: &str) -> Analysis {
                     )),
                 }
             }
+            "theme" => match object.get("theme").and_then(serde_json::Value::as_str).and_then(Theme::from_name) {
+                Some(theme) => analysis.settings.theme = theme,
+                None => analysis.diagnostics.push(positions.diagnostic(
+                    value_from,
+                    value_to,
+                    "warning",
+                    "theme must be \"system\", \"dark\" or \"light\"; using \"system\".".into(),
+                )),
+            },
             other => analysis.diagnostics.push(positions.diagnostic(
                 key_from,
                 key_to,
@@ -628,6 +648,43 @@ mod tests {
         let found = analyze(text).diagnostics;
         assert_eq!(found.len(), 1, "{text:?} gave {found:?}");
         found.into_iter().next().unwrap()
+    }
+
+    #[test]
+    fn the_example_file_is_valid_and_lists_every_setting() {
+        let loaded = parse(DEFAULT_FILE);
+        assert!(loaded.valid && loaded.problems.is_empty(), "{:?}", loaded.problems);
+        assert_eq!(loaded.settings, Settings::default());
+        for name in ["autosave_delay_ms", "theme"] {
+            assert!(DEFAULT_FILE.contains(&format!("// \"{name}\":")), "{name} is missing");
+        }
+    }
+
+    #[test]
+    fn theme_defaults_to_system_and_reads_the_three_names() {
+        assert_eq!(parse("").settings.theme, Theme::System);
+        assert_eq!(parse("{}").settings.theme, Theme::System);
+        assert_eq!(parse(r#"{ "theme": "dark" }"#).settings.theme, Theme::Dark);
+        assert_eq!(parse(r#"{ "theme": "light" }"#).settings.theme, Theme::Light);
+        assert_eq!(parse(r#"{ "theme": "System" }"#).settings.theme, Theme::System);
+    }
+
+    #[test]
+    fn a_bad_theme_falls_back_to_system_with_a_warning() {
+        for text in [r#"{ "theme": "blue" }"#, r#"{ "theme": 3 }"#, r#"{ "theme": null }"#] {
+            let loaded = parse(text);
+            assert_eq!(loaded.settings.theme, Theme::System, "{text}");
+            assert!(loaded.valid, "{text}");
+            assert_eq!(loaded.problems.len(), 1, "{text}");
+        }
+        assert_eq!(covered(r#"{ "theme": "blue" }"#, &only(r#"{ "theme": "blue" }"#)), r#""blue""#);
+    }
+
+    #[test]
+    fn the_default_file_mentions_the_theme_and_changes_nothing() {
+        assert!(DEFAULT_FILE.contains("// \"theme\": \"system\""));
+        let edited = DEFAULT_FILE.replace("// \"theme\": \"system\"", "\"theme\": \"light\"");
+        assert_eq!(parse(&edited).settings.theme, Theme::Light);
     }
 
     // ---- the settings themselves ----

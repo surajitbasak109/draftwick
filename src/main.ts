@@ -533,6 +533,16 @@ function describeDelay(ms: number): string {
  * file that had to be ignored or adjusted is shown, so a typo doesn't pass silently. `announce`
  * is true when the user asked for the reload, so they get confirmation.
  */
+/**
+ * "system" removes the override so the stylesheet follows the operating system (and keeps
+ * following it); "dark" and "light" set it. See the theme blocks at the top of styles.css.
+ */
+function applyTheme(theme: api.Settings["theme"]) {
+  const root = document.documentElement;
+  if (theme === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", theme);
+}
+
 async function applySettings(announce: boolean) {
   try {
     const { settings, problems, valid } = await api.getSettings();
@@ -542,6 +552,7 @@ async function applySettings(announce: boolean) {
       return;
     }
     autosave.setDelay(settings.autosave_delay_ms);
+    applyTheme(settings.theme);
     if (problems.length > 0) {
       const lead = valid ? "" : "settings.json has a mistake, so the defaults are in use. ";
       toast(lead + problems.join(" "), 12000);

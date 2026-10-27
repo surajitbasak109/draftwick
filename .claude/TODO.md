@@ -51,7 +51,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [ ] Word wrap column (default 70; soft wrap, not a line break).
 - [ ] Font family (default: the system's monospace font).
 - [ ] Font size (default 14 px; the editor is 15 px today).
-- [ ] Theme: `system`, `dark` or `light` (default `system`).
+- [ ] Theme: `system`, `dark` or `light` (default `system`). Built, needs your check: add `"theme": "light"` (or `"dark"`) to `settings.json`, save with `Ctrl+S`, and the window should switch at once; remove the line (or use `"system"`) and it should follow the operating system again. A wrong value (say `"blue"`) should underline and fall back to `system`. Also use it to check the sidebar right-click menu in light mode.
 - [ ] Show line numbers (default `false`).
 - [ ] Tab size (default 4).
 - [ ] Translate tabs to spaces (default `true`). This also decides what the Tab key does: today it moves focus out of the editor.

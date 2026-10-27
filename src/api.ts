@@ -56,6 +56,8 @@ export const getActions = () => call<ActionInfo[]>("get_actions");
 export interface Settings {
   /** How long to wait after the last keystroke before a draft is autosaved. */
   autosave_delay_ms: number;
+  /** "system" follows the operating system; the others force dark or light. */
+  theme: "system" | "dark" | "light";
 }
 
 export interface LoadedSettings {

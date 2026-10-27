@@ -1,0 +1,18 @@
+{
+  // Draftwick settings.
+  //
+  // Only the settings you want to change need to be listed here; anything missing uses its
+  // default. To change one, remove the "//" in front of it, edit the value, save this file, then
+  // choose Settings > Reload settings in Draftwick.
+
+  // How long to wait after you stop typing before a draft is saved, in milliseconds.
+  // Every keystroke restarts the wait. Allowed range: 500 (half a second) to 30000 (30 seconds).
+  // A longer wait means fewer writes; a shorter one means less is lost if the app or the
+  // computer stops suddenly. Drafts are always saved when you switch drafts or quit.
+  // Default: 5000 (5 seconds).
+  // "autosave_delay_ms": 5000
+
+  // The colour theme: "system" follows your operating system's light or dark setting, "dark" and
+  // "light" always use that one. Default: "system".
+  // "theme": "system"
+}
