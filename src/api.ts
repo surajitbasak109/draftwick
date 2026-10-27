@@ -5,6 +5,8 @@ export interface Config {
   notes_dir: string | null;
   /** Whether the sidebar was left visible; null until the user first toggles it. */
   sidebar_visible: boolean | null;
+  /** Whether long lines wrap; null until View > Toggle wrap is used (treated as on). */
+  word_wrap: boolean | null;
 }
 
 export interface NoteMeta {
@@ -115,6 +117,8 @@ export const setMenuChecked = (id: string, checked: boolean) =>
 export const getConfig = () => call<Config>("get_config");
 export const setNotesDir = (path: string) => call<Config>("set_notes_dir", { path });
 export const defaultNotesDir = () => call<string>("default_notes_dir");
+/** Remembers whether long lines wrap, for the next launch. */
+export const setWordWrap = (enabled: boolean) => call<void>("set_word_wrap", { enabled });
 export const setSidebarVisible = (visible: boolean) =>
   call<void>("set_sidebar_visible", { visible });
 export const isInNotesDir = (path: string) => call<boolean>("is_in_notes_dir", { path });

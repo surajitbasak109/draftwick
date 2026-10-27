@@ -16,9 +16,11 @@ export interface EditorOptions {
   tabSize: number;
   /** True: Tab types spaces; false: it types a tab character. */
   tabsToSpaces: boolean;
+  /** Whether long lines wrap (View > Toggle wrap). Off means they scroll sideways. */
+  wrap: boolean;
 }
 
-const DEFAULT_OPTIONS: EditorOptions = { lineNumbers: false, tabSize: 4, tabsToSpaces: true };
+const DEFAULT_OPTIONS: EditorOptions = { lineNumbers: false, tabSize: 4, tabsToSpaces: true, wrap: true };
 
 // The options live in a compartment, so they can change on the open document without rebuilding it.
 const optionsSlot = new Compartment();
@@ -53,6 +55,7 @@ function tabCommand(options: EditorOptions) {
 function optionsExtensions(o: EditorOptions): Extension {
   return [
     o.lineNumbers ? lineNumbers() : [],
+    o.wrap ? EditorView.lineWrapping : [],
     EditorState.tabSize.of(o.tabSize),
     indentUnit.of(o.tabsToSpaces ? " ".repeat(o.tabSize) : "\t"),
     keymap.of([{ key: "Tab", run: tabCommand(o), shift: indentLess }]),
@@ -175,7 +178,6 @@ function extensionsFor(
     search({ top: true }),
     EditorState.allowMultipleSelections.of(true),
     EditorView.clickAddsSelectionRange.of((e) => e.ctrlKey || e.metaKey),
-    EditorView.lineWrapping,
     keymap.of([
       { key: "Mod-h", run: openSearchPanel, preventDefault: true },
       ...searchKeymap,

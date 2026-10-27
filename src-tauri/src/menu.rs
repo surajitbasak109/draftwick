@@ -84,6 +84,8 @@ pub const ACTIONS: &[Action] = &[
     // ---- View ----
     // Shows a tick while the sidebar is visible; the frontend keeps the tick in step.
     Action::new("toggle_sidebar", "Show sidebar", Some("CmdOrCtrl+B"), Some("View"), true).ticked(),
+    // Turns wrapping of long lines off and on; ticked while wrapping is on. No shortcut yet.
+    Action::new("toggle_wrap", "Toggle wrap", None, Some("View"), true).ticked(),
     // Its label flips between "Enter full screen" and "Exit full screen" (`set_menu_text`). F11 is
     // the only shortcut without Ctrl.
     Action::new("fullscreen", "Enter full screen", Some("F11"), Some("View"), true),
@@ -295,7 +297,7 @@ mod tests {
             ["New file", "Open", "Open/Set draft directory", "Save", "Close", "Quit"]
         );
         assert_eq!(menu_labels("Edit"), ["Undo", "Redo"]);
-        assert_eq!(menu_labels("View"), ["Show sidebar", "Enter full screen"]);
+        assert_eq!(menu_labels("View"), ["Show sidebar", "Toggle wrap", "Enter full screen"]);
         assert_eq!(menu_labels("Settings"), ["Open settings file", "Reload settings"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
     }
@@ -325,10 +327,13 @@ mod tests {
 
     #[test]
     fn items_in_a_menu_that_have_no_shortcut_are_still_reachable() {
-        // The Help and Settings items are menu-only, and the Edit items are click-only on purpose
-        // (see the Edit section of the table); every other menu item must also have a shortcut.
+        // The Help and Settings items are menu-only, the Edit items are click-only on purpose (see
+        // the Edit section of the table), and Toggle wrap has no shortcut yet; every other menu item
+        // must also have a shortcut.
         for action in ACTIONS.iter().filter(|a| a.menu.is_some()) {
-            if !matches!(action.menu, Some("Help") | Some("Settings") | Some("Edit")) {
+            let menu_only = matches!(action.menu, Some("Help") | Some("Settings") | Some("Edit"))
+                || action.id == "toggle_wrap";
+            if !menu_only {
                 assert!(action.accelerator.is_some(), "{} has no shortcut", action.id);
             }
         }
@@ -344,9 +349,9 @@ mod tests {
     }
 
     #[test]
-    fn only_the_sidebar_item_is_a_check_item() {
+    fn only_the_sidebar_and_wrap_items_are_check_items() {
         for action in ACTIONS {
-            let expected = (action.id == "toggle_sidebar").then_some(true);
+            let expected = matches!(action.id, "toggle_sidebar" | "toggle_wrap").then_some(true);
             assert_eq!(action.check, expected, "{}", action.id);
         }
     }

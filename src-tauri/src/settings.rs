@@ -33,8 +33,8 @@ pub const FONT_SIZE_DEFAULT: u32 = 14;
 pub const FONT_SIZE_MIN: u32 = 8;
 pub const FONT_SIZE_MAX: u32 = 48;
 
-/// Where lines wrap, in characters. 0 means "wrap at the edge of the window".
-pub const WRAP_COLUMN_DEFAULT: u32 = 70;
+/// Where lines wrap, in characters. 0 means "wrap at the edge of the window", which is the default.
+pub const WRAP_COLUMN_DEFAULT: u32 = 0;
 pub const WRAP_COLUMN_MIN: u32 = 20;
 pub const WRAP_COLUMN_MAX: u32 = 300;
 
@@ -786,7 +786,7 @@ mod tests {
     #[test]
     fn appearance_settings_have_defaults_and_read_values() {
         let d = Settings::default();
-        assert_eq!((d.font_size, d.wrap_column), (14, 70));
+        assert_eq!((d.font_size, d.wrap_column), (14, 0));
         assert_eq!(d.font_family, "");
         let loaded = parse(r#"{ "font_size": 18, "font_family": " Fira Code ", "wrap_column": 90 }"#);
         assert!(loaded.problems.is_empty(), "{:?}", loaded.problems);

@@ -28,7 +28,7 @@
   --mono: monospace;
   /* Set from the font_size, font_family and wrap_column settings (see applyAppearance in main.ts). */
   --editor-font-size: 14px;
-  --editor-max-width: calc(70ch + 48px);
+  --editor-max-width: none;
   --ui: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
   color-scheme: dark;
 }

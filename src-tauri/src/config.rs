@@ -17,6 +17,10 @@ pub struct Config {
     /// the frontend treats as visible.
     #[serde(default)]
     pub sidebar_visible: Option<bool>,
+    /// Whether long lines wrap, as last set by View > Toggle wrap. `None` until they do, which the
+    /// frontend treats as wrapping on.
+    #[serde(default)]
+    pub word_wrap: Option<bool>,
 }
 
 /// A missing or corrupt config file is treated as "not configured yet".
@@ -103,6 +107,12 @@ pub fn set_sidebar_visible(app: AppHandle, visible: bool) -> AppResult<()> {
     update(&config_dir(&app)?, |config| config.sidebar_visible = Some(visible)).map(|_| ())
 }
 
+/// Remembers whether long lines wrap, so the next launch looks the same.
+#[tauri::command]
+pub fn set_word_wrap(app: AppHandle, enabled: bool) -> AppResult<()> {
+    update(&config_dir(&app)?, |config| config.word_wrap = Some(enabled)).map(|_| ())
+}
+
 #[tauri::command]
 pub fn default_notes_dir() -> AppResult<String> {
     let dir = home_notes_dir()?;
@@ -120,6 +130,16 @@ mod tests {
     }
 
     #[test]
+    fn word_wrap_is_remembered_without_touching_the_other_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        update(dir.path(), |c| c.sidebar_visible = Some(false)).unwrap();
+        update(dir.path(), |c| c.word_wrap = Some(false)).unwrap();
+        let config = load(dir.path());
+        assert_eq!((config.word_wrap, config.sidebar_visible), (Some(false), Some(false)));
+        assert_eq!(load(tempfile::tempdir().unwrap().path()).word_wrap, None);
+    }
+
+    #[test]
     fn missing_config_is_default() {
         let dir = tempfile::tempdir().unwrap();
         assert_eq!(load(dir.path()), Config::default());
@@ -131,6 +151,7 @@ mod tests {
         let config = Config {
             notes_dir: Some("/tmp/notes".into()),
             sidebar_visible: Some(false),
+            word_wrap: None,
         };
         save(dir.path(), &config).unwrap();
         assert_eq!(load(dir.path()), config);
@@ -150,6 +171,7 @@ mod tests {
         let config = Config {
             notes_dir: Some(gone.to_string_lossy().into_owned()),
             sidebar_visible: None,
+            word_wrap: None,
         };
         assert_eq!(effective(config), Config::default());
     }
@@ -161,6 +183,7 @@ mod tests {
         let config = Config {
             notes_dir: Some(gone.to_string_lossy().into_owned()),
             sidebar_visible: Some(false),
+            word_wrap: None,
         };
         let shown = effective(config);
         assert_eq!(shown.notes_dir, None);
@@ -201,6 +224,7 @@ mod tests {
         let config = Config {
             notes_dir: Some(dir.path().to_string_lossy().into_owned()),
             sidebar_visible: None,
+            word_wrap: None,
         };
         assert_eq!(effective(config.clone()), config);
     }

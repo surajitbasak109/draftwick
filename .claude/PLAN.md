@@ -352,7 +352,7 @@ Rules:
 | Setting | Key | Default | Notes |
 |---|---|---|---|
 | **Autosave delay** | `autosave_delay_ms` | **5000** (5 s) | **Built.** Allowed range **500 to 30000**; a value outside it is clamped and reported. How long to wait after the last keystroke; every keystroke restarts the wait. Drafts are still saved immediately when you switch drafts, lose focus or quit, so a long delay only affects how much typing is at risk if the app or computer stops suddenly. |
-| Word wrap column | `wrap_column` | 70 | Soft wrap at this width, not a hard line break (confirm). Interacts with View → Toggle wrap; decide together. |
+| Word wrap column | `wrap_column` | 0 (the window edge) | Soft wrap at this width, not a hard line break (confirm). Interacts with View → Toggle wrap; decide together. |
 | Font family | `font_family` | system default text editor font | Use the generic `monospace`, which WebKitGTK maps to the system's monospace font. Today's list is JetBrains Mono, Ubuntu Mono, DejaVu Sans Mono. |
 | Font size | `font_size` | 14 px | The editor is currently 15 px, so the default changes. |
 | Dark or light mode | `theme` | `"system"` (confirmed) | Today the app follows the operating system. Proposal: `"system"`, `"dark"` or `"light"`, so today's behaviour stays the default. |

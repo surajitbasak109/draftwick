@@ -24,9 +24,9 @@
   // "font_family": "JetBrains Mono"
 
   // How many characters wide a line is before it wraps onto the next line. This only changes how
-  // the text is shown; no line break is added to the file. Allowed range: 20 to 300, or 0 to wrap
-  // at the edge of the window. Default: 70.
-  // "wrap_column": 70
+  // the text is shown; no line break is added to the file. Allowed: 0 to wrap at the edge of the
+  // window, or 20 to 300 to keep lines that many characters wide. Default: 0.
+  // "wrap_column": 0
 
   // Show a line number beside each line. Default: false.
   // "show_line_numbers": false

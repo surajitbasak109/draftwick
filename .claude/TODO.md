@@ -41,14 +41,14 @@ The agent cannot see or click the real window, so these are yours. Everything be
 
 - [ ] **File > Save as…** (`Ctrl+Shift+S`). Medium: save dialog, `.md` or `.txt` only, the open draft switches to the new path, the old file is left alone.
 - [x] **Edit > Undo, Redo.** A new Edit menu with click-only Undo and Redo (no accelerator, so `Ctrl+Z` and `Ctrl+Shift+Z` still go to whatever has focus). Checked by the user on 2026-10-27. Not done: a display-only shortcut hint beside the item.
-- [ ] **Edit > Cut, Copy.** Clipboard access from a menu click may be refused by the web view; needs proving in the real window, or a clipboard plugin.
+- [x] ~~Edit > Cut, Copy.~~ Dropped 2026-10-27 at the user's request: the web view may refuse clipboard access from a menu click, and Ctrl+X / Ctrl+C already work in the editor. Reopen it if wanted.
 - [ ] **Edit > Copy as HTML.** Needs a Markdown to HTML renderer, sanitising, and writing both HTML and plain text to the clipboard.
-- [ ] **View > Toggle wrap.** Easy; decide together with the word wrap column setting.
+- [ ] **View > Toggle wrap.** Built, needs your check. View > Toggle wrap (ticked while wrapping is on, no shortcut) turns wrapping of long lines off altogether, so they scroll sideways, and back on (then the `wrap_column` setting applies again; its default is 0, the window edge). The choice is remembered in `config.json` like the sidebar; say if you want it to start on every launch instead. Check: the tick matches, a long line stops wrapping, the choice survives a restart, `wrap_column` still works when it is on.
 - [x] **View > Enter full screen** (`F11`). Checked by the user on 2026-10-27. The menu text flips to "Exit full screen"; uses the `set-fullscreen` and `is-fullscreen` window permissions. Known gap: if the window manager leaves full screen by itself, the menu text can stay "Exit full screen" until the next toggle.
 
 ## Settings (M9): the plumbing exists, each one is a key plus the code that applies it
 
-- [x] Word wrap column (default 70; soft wrap, not a line break). Checked by the user on 2026-10-27; `"wrap_column"` in `settings.json` (20 to 300, or 0 for the window edge).
+- [x] Word wrap column (default 0, the window edge; soft wrap, not a line break; changed from 70 on 2026-10-27). Checked by the user on 2026-10-27; `"wrap_column"` in `settings.json` (20 to 300, or 0 for the window edge).
 - [x] Font family (default: the system's monospace font). Checked by the user on 2026-10-27; `"font_family": "Fira Code"`; an uninstalled name falls back to monospace.
 - [x] Font size (default 14 px; the editor was 15 px before). Checked by the user on 2026-10-27; `"font_size"`, 8 to 48.
 - [ ] Theme: `system`, `dark` or `light` (default `system`). Built, needs your check: add `"theme": "light"` (or `"dark"`) to `settings.json`, save with `Ctrl+S`, and the window should switch at once; remove the line (or use `"system"`) and it should follow the operating system again. A wrong value (say `"blue"`) should underline and fall back to `system`. Also use it to check the sidebar right-click menu in light mode.

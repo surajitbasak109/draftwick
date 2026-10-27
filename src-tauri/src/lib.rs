@@ -23,6 +23,7 @@ pub fn run() {
             config::set_notes_dir,
             config::default_notes_dir,
             config::set_sidebar_visible,
+            config::set_word_wrap,
             notes::is_in_notes_dir,
             notes::list_notes,
             notes::read_note,

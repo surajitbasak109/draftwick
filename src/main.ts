@@ -521,6 +521,7 @@ const handlers: Record<string, () => void> = {
   shortcuts: () => shortcutsHelp.open(actionTable),
   open_settings: () => void openSettingsFile(),
   reload_settings: () => void applySettings(true),
+  toggle_wrap: () => toggleWrap(),
   fullscreen: () => void toggleFullscreen(),
   undo: () => editor.undo(),
   redo: () => editor.redo(),
@@ -580,20 +581,28 @@ function applyTheme(theme: api.Settings["theme"]) {
   else root.setAttribute("data-theme", theme);
 }
 
+/** Whether long lines wrap (View > Toggle wrap). Not a setting: it is remembered in config.json. */
+let wrapOn = true;
+/** The settings last applied, so the wrap toggle can redo the layout without re-reading the file. */
+let appliedSettings: api.Settings | null = null;
+
 /** Font and wrap width: the editor reads these CSS variables (see styles.css and editor.ts). */
 function applyAppearance(settings: api.Settings) {
+  appliedSettings = settings;
   const style = document.documentElement.style;
   style.setProperty("--editor-font-size", `${settings.font_size}px`);
   // The name was checked in Rust (letters, digits, spaces and . _ - only), so quoting it is safe.
   style.setProperty("--mono", settings.font_family ? `"${settings.font_family}", monospace` : "monospace");
   style.setProperty(
     "--editor-max-width",
-    settings.wrap_column === 0 ? "none" : `calc(${settings.wrap_column}ch + 48px)`,
+    // With wrapping off, lines scroll sideways, so there is no column to keep them in.
+    !wrapOn || settings.wrap_column === 0 ? "none" : `calc(${settings.wrap_column}ch + 48px)`,
   );
   editor.setOptions({
     lineNumbers: settings.show_line_numbers,
     tabSize: settings.tab_size,
     tabsToSpaces: settings.translate_tabs_to_spaces,
+    wrap: wrapOn,
   });
   editor.refreshLayout();
 }
@@ -618,6 +627,24 @@ async function applySettings(announce: boolean) {
   } catch (e) {
     toast(`Couldn't load settings: ${errorMessage(e)}`);
   }
+}
+
+/** View > Toggle wrap: long lines wrap or scroll sideways. The choice is remembered. */
+function toggleWrap() {
+  wrapOn = !wrapOn;
+  if (appliedSettings) applyAppearance(appliedSettings);
+  syncWrapTick();
+  void api
+    .setWordWrap(wrapOn)
+    .catch((e) => toast(`Couldn't remember the wrap choice: ${errorMessage(e)}`));
+  editor.focus();
+}
+
+/** Keeps the tick on View > Toggle wrap in step with the wrapping. */
+function syncWrapTick() {
+  void api
+    .setMenuChecked("toggle_wrap", wrapOn)
+    .catch((e) => toast(`Couldn't update the menu: ${errorMessage(e)}`));
 }
 
 /** Shows or hides the sidebar, and remembers the choice for the next launch. */
@@ -700,10 +727,12 @@ async function boot() {
 
   let configured = false;
   let savedSidebar: boolean | null = null;
+  let savedWrap: boolean | null = null;
   try {
     const config = await api.getConfig();
     configured = Boolean(config.notes_dir);
     savedSidebar = config.sidebar_visible;
+    savedWrap = config.word_wrap;
   } catch (e) {
     toast(`Couldn't read settings: ${errorMessage(e)}`);
   }
@@ -716,6 +745,12 @@ async function boot() {
   // Restore the sidebar as the user left it. Nothing is written back: this is not a new choice.
   if (savedSidebar === false && sidebar.isVisible()) sidebar.toggle();
   syncSidebarTick();
+  // Likewise the wrapping: restored, not written back.
+  if (savedWrap === false) {
+    wrapOn = false;
+    if (appliedSettings) applyAppearance(appliedSettings);
+  }
+  syncWrapTick();
   await refreshSidebar();
   await newNote();
 }
