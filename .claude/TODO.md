@@ -9,7 +9,7 @@ The checklist of work that is left. `.claude/PLAN.md` holds the design and the d
 
 ## Suggested by you
 
-- [ ] **Status bar at the bottom of the window.** Needs a decision first: what should it show? Candidates: the draft's name, line and column, "Saved" / "Unsaved" / "Autosave off", word count, line ending (LF or CRLF).
+- [x] **Status bar at the bottom of the window.** Shows the draft name, the cursor as `Ln 3, Col 14`, `N characters selected` while text is selected, `Saved` / `Unsaved` (nothing for a blank new draft) and a red `Autosave off` pill when autosave is paused (hover for the reason). Checked by the user on 2026-10-27. Left out on purpose: a file-type label (the file name shows `.md` or `.txt`), word count and line ending (LF or CRLF); add them if wanted.
 
 ## To check in the real window (you)
 
@@ -32,7 +32,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 
 - [x] `pnpm tauri build` produces the `.deb` (2.1 MiB) and the AppImage (84.5 MiB); both built on 2026-10-27.
 - [ ] **Snap package (on hold: ask the user again when they bring up snap).** Decisions to put to them then: (1) may the agent install `snapcraft`, which needs LXD or Multipass, or `--destructive-mode` to build on this machine (suggested: `sudo snap install snapcraft --classic` plus LXD); (2) confinement: strict with the `home` interface (suggested; a draft directory outside the home folder would be blocked) or `classic` (needs a manual Snap Store review); (3) a local `.snap` file only (suggested) or publishing to the Snap Store (never without being asked). Also needs a `snap/snapcraft.yaml` in the repo.
-- [ ] Install the `.deb` on Ubuntu: Draftwick appears in the launcher and starts. Built, needs your check. Also run the AppImage once.
+- [x] Install the `.deb` on Ubuntu: Draftwick appears in the launcher and starts; the AppImage also runs. Checked by the user on 2026-10-27 (packages rebuilt from `c288c22`).
 - [ ] Measure start-up (target under 500 ms on a warm start) and idle memory (under 150 MB); write the numbers into `.claude/PLAN.md`.
 - [x] Content-security policy is on (own files only; inline styles allowed for CodeMirror; IPC allowed). Checked by the user in a release build and in `pnpm tauri dev` on 2026-10-27.
 - [ ] Replace the generated placeholder icon with a real one.

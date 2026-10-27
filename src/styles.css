@@ -23,6 +23,8 @@
   --menu-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   --danger: #f0716a;
   --danger-bg: rgba(240, 113, 106, 0.14);
+  --ok: #5fc48a;
+  --warn: #e5b567;
   --mono: "JetBrains Mono", "Ubuntu Mono", "DejaVu Sans Mono", monospace;
   --ui: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
   color-scheme: dark;
@@ -59,6 +61,8 @@
     --menu-shadow: 0 10px 30px rgba(20, 24, 33, 0.16), 0 2px 6px rgba(20, 24, 33, 0.08);
     --danger: #c9372c;
     --danger-bg: rgba(201, 55, 44, 0.09);
+    --ok: #1f8a4c;
+    --warn: #a86a0c;
     color-scheme: light;
   }
 }
@@ -88,6 +92,8 @@
   --menu-shadow: 0 10px 30px rgba(20, 24, 33, 0.16), 0 2px 6px rgba(20, 24, 33, 0.08);
   --danger: #c9372c;
   --danger-bg: rgba(201, 55, 44, 0.09);
+  --ok: #1f8a4c;
+  --warn: #a86a0c;
   color-scheme: light;
 }
 
@@ -113,6 +119,7 @@ body {
 #app {
   display: grid;
   grid-template-columns: 240px 1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
 }
 
@@ -134,8 +141,103 @@ body {
 
 #editor {
   min-width: 0;
+  min-height: 0;
   height: 100%;
   overflow: hidden;
+}
+
+#sidebar {
+  min-height: 0;
+}
+
+/* ---------- status bar ---------- */
+
+#statusbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 32px;
+  padding: 7px 14px;
+  background: var(--bg-side);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  user-select: none;
+}
+
+#status-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+/* A thin divider before each item on the right. */
+#status-selection,
+#status-position,
+#status-state {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+#status-selection[hidden] {
+  display: none;
+}
+
+#status-selection {
+  color: var(--fg);
+}
+
+#status-position {
+  font-variant-numeric: tabular-nums;
+}
+
+#status-selection::before,
+#status-position::before,
+#status-state::before {
+  content: "";
+  order: -2;
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+/* Saved or not, as a coloured dot before the word. */
+#status-state:empty {
+  display: none;
+}
+
+#status-state::after {
+  content: "";
+  order: -1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+#status-state.unsaved::after {
+  background: var(--warn);
+}
+
+#status-state.unsaved {
+  color: var(--fg);
+}
+
+#status-autosave {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .note-row {

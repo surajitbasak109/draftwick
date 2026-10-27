@@ -94,9 +94,26 @@ function errorMessage(e: unknown): string {
 let shownReason: string | null = null;
 let shownTitle = "";
 
+const statusName = document.querySelector<HTMLElement>("#status-name")!;
+const statusSelection = document.querySelector<HTMLElement>("#status-selection")!;
+const statusPosition = document.querySelector<HTMLElement>("#status-position")!;
+const statusState = document.querySelector<HTMLElement>("#status-state")!;
+const statusAutosave = document.querySelector<HTMLElement>("#status-autosave")!;
+
+/** The bar under the editor: draft name, cursor position, saved or not, and whether autosave is off. */
+function updateStatus(name: string) {
+  statusName.textContent = name;
+  // A blank new draft has no file yet, so it is neither saved nor unsaved.
+  statusState.textContent = autosave.dirty ? "Unsaved" : current.path ? "Saved" : "";
+  statusState.classList.toggle("unsaved", autosave.dirty);
+  statusAutosave.hidden = shownReason === null;
+  statusAutosave.title = shownReason ? `Autosave is off because ${shownReason}` : "";
+}
+
 function updateTitle() {
   shownReason = autosaveOffReason(current);
   const base = current.path ? current.name : "Untitled";
+  updateStatus(base);
   const note = shownReason ? " (autosave off)" : "";
   const title = `${autosave.dirty ? "• " : ""}${base}${note} — ${APP_NAME}`;
   if (title === shownTitle) return;
@@ -133,6 +150,11 @@ const autosave = createAutosave({
 
 const editor = createEditor(document.querySelector<HTMLElement>("#editor")!, {
   onChange: onEdited,
+  onCursor: (line, column, selected) => {
+    statusPosition.textContent = `Ln ${line}, Col ${column}`;
+    statusSelection.hidden = selected === 0;
+    statusSelection.textContent = `${selected.toLocaleString()} character${selected === 1 ? "" : "s"} selected`;
+  },
   // Losing focus only saves what is allowed to autosave.
   onBlur: () => {
     if (autosaveOffReason(current) === null) void autosave.flush(false);

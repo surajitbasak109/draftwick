@@ -23,6 +23,11 @@ export interface EditorHandle {
 interface Handlers {
   onChange(): void;
   onBlur(): void;
+  /**
+   * The cursor moved or the text changed: 1-based line and column of the main cursor, and how many
+   * characters are selected in total (0 when nothing is).
+   */
+  onCursor?(line: number, column: number, selected: number): void;
   /** Finds mistakes in the settings file's text. When given, they are underlined as you type. */
   lint?(text: string): Promise<SettingsDiagnostic[]>;
 }
@@ -121,6 +126,16 @@ function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean
     theme,
     EditorView.updateListener.of((u) => {
       if (u.docChanged && !isLoading()) handlers.onChange();
+      if (u.docChanged || u.selectionSet) {
+        const head = u.state.selection.main.head;
+        const line = u.state.doc.lineAt(head);
+        let selected = 0;
+        for (const range of u.state.selection.ranges) {
+          // Count characters as people do (an emoji is one), not as UTF-16 units.
+          if (!range.empty) selected += Array.from(u.state.sliceDoc(range.from, range.to)).length;
+        }
+        handlers.onCursor?.(line.number, head - line.from + 1, selected);
+      }
     }),
     EditorView.domEventHandlers({
       blur: () => {
