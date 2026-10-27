@@ -58,6 +58,12 @@ export interface Settings {
   autosave_delay_ms: number;
   /** "system" follows the operating system; the others force dark or light. */
   theme: "system" | "dark" | "light";
+  /** Editor text size in pixels. */
+  font_size: number;
+  /** One font name, or "" for the system monospace font. */
+  font_family: string;
+  /** Characters per line before wrapping; 0 wraps at the window edge. */
+  wrap_column: number;
 }
 
 export interface LoadedSettings {

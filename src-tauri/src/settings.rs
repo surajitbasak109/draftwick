@@ -28,6 +28,24 @@ pub const AUTOSAVE_DELAY_DEFAULT_MS: u64 = 5_000;
 pub const AUTOSAVE_DELAY_MIN_MS: u64 = 500;
 pub const AUTOSAVE_DELAY_MAX_MS: u64 = 30_000;
 
+/// Editor font size in pixels.
+pub const FONT_SIZE_DEFAULT: u32 = 14;
+pub const FONT_SIZE_MIN: u32 = 8;
+pub const FONT_SIZE_MAX: u32 = 48;
+
+/// Where lines wrap, in characters. 0 means "wrap at the edge of the window".
+pub const WRAP_COLUMN_DEFAULT: u32 = 70;
+pub const WRAP_COLUMN_MIN: u32 = 20;
+pub const WRAP_COLUMN_MAX: u32 = 300;
+
+/// A font name is shown to the web view as part of a CSS font list, so only plain name characters
+/// are accepted: letters, digits, spaces and . _ -
+fn valid_font_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.chars().count() <= 100
+        && name.chars().all(|c| c.is_alphanumeric() || matches!(c, ' ' | '.' | '_' | '-'))
+}
+
 /// What a new settings file contains: every setting, commented out at its default. The text lives
 /// in `settings.example.jsonc` at the project root, so it can be read (and compared with your own
 /// file) without running the app, and is built into the program from there.
@@ -58,6 +76,10 @@ impl Theme {
 pub struct Settings {
     pub autosave_delay_ms: u64,
     pub theme: Theme,
+    pub font_size: u32,
+    /// A font name, or empty for the system's monospace font.
+    pub font_family: String,
+    pub wrap_column: u32,
 }
 
 impl Default for Settings {
@@ -65,6 +87,9 @@ impl Default for Settings {
         Settings {
             autosave_delay_ms: AUTOSAVE_DELAY_DEFAULT_MS,
             theme: Theme::default(),
+            font_size: FONT_SIZE_DEFAULT,
+            font_family: String::new(),
+            wrap_column: WRAP_COLUMN_DEFAULT,
         }
     }
 }
@@ -524,6 +549,71 @@ fn analyze(text: &str) -> Analysis {
                     "theme must be \"system\", \"dark\" or \"light\"; using \"system\".".into(),
                 )),
             },
+            "font_size" => match object.get("font_size").and_then(serde_json::Value::as_f64) {
+                Some(n) if n.is_finite() => {
+                    let wanted = n.round().max(0.0) as u32;
+                    let clamped = wanted.clamp(FONT_SIZE_MIN, FONT_SIZE_MAX);
+                    if clamped != wanted {
+                        analysis.diagnostics.push(positions.diagnostic(
+                            value_from,
+                            value_to,
+                            "warning",
+                            format!(
+                                "font_size must be between {FONT_SIZE_MIN} and {FONT_SIZE_MAX} \
+                                 ({wanted} was given); using {clamped}."
+                            ),
+                        ));
+                    }
+                    analysis.settings.font_size = clamped;
+                }
+                _ => analysis.diagnostics.push(positions.diagnostic(
+                    value_from,
+                    value_to,
+                    "warning",
+                    format!("font_size must be a number of pixels; using {FONT_SIZE_DEFAULT}."),
+                )),
+            },
+            "font_family" => match object.get("font_family").and_then(serde_json::Value::as_str) {
+                Some(name) if name.trim().is_empty() => {}
+                Some(name) if valid_font_name(name.trim()) => {
+                    analysis.settings.font_family = name.trim().to_string();
+                }
+                _ => analysis.diagnostics.push(positions.diagnostic(
+                    value_from,
+                    value_to,
+                    "warning",
+                    "font_family must be one font name, like \"Fira Code\" (letters, digits, spaces, \
+                     . _ - only); using the system monospace font."
+                        .into(),
+                )),
+            },
+            "wrap_column" => match object.get("wrap_column").and_then(serde_json::Value::as_f64) {
+                Some(n) if n.is_finite() => {
+                    let wanted = n.round().max(0.0) as u32;
+                    let applied = if wanted == 0 { 0 } else { wanted.clamp(WRAP_COLUMN_MIN, WRAP_COLUMN_MAX) };
+                    if applied != wanted {
+                        analysis.diagnostics.push(positions.diagnostic(
+                            value_from,
+                            value_to,
+                            "warning",
+                            format!(
+                                "wrap_column must be 0 or between {WRAP_COLUMN_MIN} and \
+                                 {WRAP_COLUMN_MAX} ({wanted} was given); using {applied}."
+                            ),
+                        ));
+                    }
+                    analysis.settings.wrap_column = applied;
+                }
+                _ => analysis.diagnostics.push(positions.diagnostic(
+                    value_from,
+                    value_to,
+                    "warning",
+                    format!(
+                        "wrap_column must be a number of characters (0 wraps at the window edge); \
+                         using {WRAP_COLUMN_DEFAULT}."
+                    ),
+                )),
+            },
             other => analysis.diagnostics.push(positions.diagnostic(
                 key_from,
                 key_to,
@@ -651,11 +741,59 @@ mod tests {
     }
 
     #[test]
+    fn appearance_settings_have_defaults_and_read_values() {
+        let d = Settings::default();
+        assert_eq!((d.font_size, d.wrap_column), (14, 70));
+        assert_eq!(d.font_family, "");
+        let loaded = parse(r#"{ "font_size": 18, "font_family": " Fira Code ", "wrap_column": 90 }"#);
+        assert!(loaded.problems.is_empty(), "{:?}", loaded.problems);
+        assert_eq!(
+            (loaded.settings.font_size, loaded.settings.font_family.as_str(), loaded.settings.wrap_column),
+            (18, "Fira Code", 90)
+        );
+    }
+
+    #[test]
+    fn font_size_and_wrap_column_are_clamped_with_a_warning() {
+        assert_eq!(parse(r#"{ "font_size": 3 }"#).settings.font_size, 8);
+        assert_eq!(parse(r#"{ "font_size": 400 }"#).settings.font_size, 48);
+        assert_eq!(parse(r#"{ "wrap_column": 5 }"#).settings.wrap_column, 20);
+        assert_eq!(parse(r#"{ "wrap_column": 9000 }"#).settings.wrap_column, 300);
+        for text in [r#"{ "font_size": 3 }"#, r#"{ "wrap_column": 5 }"#, r#"{ "font_size": "big" }"#, r#"{ "wrap_column": true }"#] {
+            assert_eq!(parse(text).problems.len(), 1, "{text}");
+            assert!(parse(text).valid, "{text}");
+        }
+        assert_eq!(parse(r#"{ "font_size": "big" }"#).settings.font_size, 14);
+    }
+
+    #[test]
+    fn a_wrap_column_of_zero_means_the_window_edge_and_is_not_a_problem() {
+        let loaded = parse(r#"{ "wrap_column": 0 }"#);
+        assert_eq!(loaded.settings.wrap_column, 0);
+        assert!(loaded.problems.is_empty());
+    }
+
+    #[test]
+    fn only_plain_font_names_are_accepted() {
+        for good in ["Fira Code", "JetBrains Mono", "Ubuntu_Mono", "Noto Sans CJK JP", "IBM Plex-Mono 2"] {
+            assert!(valid_font_name(good), "{good}");
+        }
+        for bad in ["", "a;b", "a{b}", "\"quoted\"", "x, y", "url(x)", "a\\b", "<b>"] {
+            assert!(!valid_font_name(bad), "{bad}");
+        }
+        let loaded = parse(r#"{ "font_family": "x; color: red" }"#);
+        assert_eq!(loaded.settings.font_family, "");
+        assert_eq!(loaded.problems.len(), 1);
+        assert!(parse(r#"{ "font_family": "" }"#).problems.is_empty());
+        assert_eq!(parse(r#"{ "font_family": 12 }"#).problems.len(), 1);
+    }
+
+    #[test]
     fn the_example_file_is_valid_and_lists_every_setting() {
         let loaded = parse(DEFAULT_FILE);
         assert!(loaded.valid && loaded.problems.is_empty(), "{:?}", loaded.problems);
         assert_eq!(loaded.settings, Settings::default());
-        for name in ["autosave_delay_ms", "theme"] {
+        for name in ["autosave_delay_ms", "theme", "font_size", "font_family", "wrap_column"] {
             assert!(DEFAULT_FILE.contains(&format!("// \"{name}\":")), "{name} is missing");
         }
     }

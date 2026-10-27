@@ -15,4 +15,16 @@
   // The colour theme: "system" follows your operating system's light or dark setting, "dark" and
   // "light" always use that one. Default: "system".
   // "theme": "system"
+
+  // The size of the text in the editor, in pixels. Allowed range: 8 to 48. Default: 14.
+  // "font_size": 14
+
+  // The font used in the editor: one font name that is installed on your computer, such as
+  // "Fira Code" or "JetBrains Mono". Leave it out to use the system's monospace font.
+  // "font_family": "JetBrains Mono"
+
+  // How many characters wide a line is before it wraps onto the next line. This only changes how
+  // the text is shown; no line break is added to the file. Allowed range: 20 to 300, or 0 to wrap
+  // at the edge of the window. Default: 70.
+  // "wrap_column": 70
 }

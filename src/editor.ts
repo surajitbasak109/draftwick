@@ -18,6 +18,8 @@ export interface EditorHandle {
   /** True when the document has no text at all. */
   isEmpty(): boolean;
   focus(): void;
+  /** Re-measures the text after the font or the wrap width changed. */
+  refreshLayout(): void;
 }
 
 interface Handlers {
@@ -36,7 +38,7 @@ interface Handlers {
 const theme = EditorView.theme({
   "&": { height: "100%", color: "var(--fg)", backgroundColor: "var(--bg)" },
   "&.cm-focused": { outline: "none" },
-  ".cm-scroller": { fontFamily: "var(--mono)", fontSize: "15px", lineHeight: "1.6" },
+  ".cm-scroller": { fontFamily: "var(--mono)", fontSize: "var(--editor-font-size)", lineHeight: "1.6" },
   ".cm-content": { padding: "16px 24px", caretColor: "var(--fg)" },
   ".cm-cursor": { borderLeftColor: "var(--fg)" },
   ".cm-selectionBackground": { backgroundColor: "var(--selection) !important" },
@@ -124,6 +126,9 @@ function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean
     // The settings file is the only .json the app opens (see settings.rs).
     ext === "json" ? settingsExtensions(handlers) : [],
     theme,
+    // Lines wrap at the wrap_column setting. The settings file keeps the full window width, because
+    // its comment lines are long.
+    ext === "json" ? [] : EditorView.theme({ ".cm-content": { maxWidth: "var(--editor-max-width)" } }),
     EditorView.updateListener.of((u) => {
       if (u.docChanged && !isLoading()) handlers.onChange();
       if (u.docChanged || u.selectionSet) {
@@ -171,5 +176,6 @@ export function createEditor(parent: HTMLElement, handlers: Handlers): EditorHan
     getDoc: () => view.state.doc.sliceString(0, view.state.doc.length, eol),
     isEmpty: () => view.state.doc.length === 0,
     focus: () => view.focus(),
+    refreshLayout: () => view.requestMeasure(),
   };
 }

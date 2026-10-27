@@ -565,6 +565,19 @@ function applyTheme(theme: api.Settings["theme"]) {
   else root.setAttribute("data-theme", theme);
 }
 
+/** Font and wrap width: the editor reads these CSS variables (see styles.css and editor.ts). */
+function applyAppearance(settings: api.Settings) {
+  const style = document.documentElement.style;
+  style.setProperty("--editor-font-size", `${settings.font_size}px`);
+  // The name was checked in Rust (letters, digits, spaces and . _ - only), so quoting it is safe.
+  style.setProperty("--mono", settings.font_family ? `"${settings.font_family}", monospace` : "monospace");
+  style.setProperty(
+    "--editor-max-width",
+    settings.wrap_column === 0 ? "none" : `calc(${settings.wrap_column}ch + 48px)`,
+  );
+  editor.refreshLayout();
+}
+
 async function applySettings(announce: boolean) {
   try {
     const { settings, problems, valid } = await api.getSettings();
@@ -575,6 +588,7 @@ async function applySettings(announce: boolean) {
     }
     autosave.setDelay(settings.autosave_delay_ms);
     applyTheme(settings.theme);
+    applyAppearance(settings);
     if (problems.length > 0) {
       const lead = valid ? "" : "settings.json has a mistake, so the defaults are in use. ";
       toast(lead + problems.join(" "), 12000);
