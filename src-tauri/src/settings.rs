@@ -702,6 +702,21 @@ pub fn load(dir: &Path) -> LoadedSettings {
     }
 }
 
+/// When the file was last changed, in milliseconds since 1970; `None` if it does not exist or can't
+/// be read. Compared with the value from the last load to tell whether the file changed.
+fn modified_ms(path: &Path) -> Option<u64> {
+    let modified = fs::metadata(path).ok()?.modified().ok()?;
+    let since_epoch = modified.duration_since(std::time::UNIX_EPOCH).ok()?;
+    u64::try_from(since_epoch.as_millis()).ok()
+}
+
+/// Read-only: lets the frontend notice that `settings.json` was edited elsewhere (see the focus
+/// reload in main.ts). It never touches the file.
+#[tauri::command]
+pub fn settings_modified(app: AppHandle) -> AppResult<Option<u64>> {
+    Ok(modified_ms(&config_dir(&app)?.join(SETTINGS_FILE)))
+}
+
 /// Creates the settings file with the commented defaults if it does not exist yet. An existing
 /// file is never touched.
 fn ensure_file(dir: &Path) -> AppResult<PathBuf> {
@@ -876,6 +891,16 @@ mod tests {
         }
         assert!(!parse(r#"{ "show_line_numbers": "yes" }"#).settings.show_line_numbers);
         assert!(parse(r#"{ "translate_tabs_to_spaces": 1 }"#).settings.translate_tabs_to_spaces);
+    }
+
+    #[test]
+    fn the_modified_time_is_none_for_a_missing_file_and_some_for_a_real_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(SETTINGS_FILE);
+        assert_eq!(modified_ms(&path), None);
+        fs::write(&path, "{}").unwrap();
+        assert!(modified_ms(&path).is_some_and(|ms| ms > 1_000_000_000_000));
+        assert!(!dir.path().join("settings.json.tmp").exists(), "reading must not create files");
     }
 
     #[test]

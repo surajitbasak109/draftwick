@@ -42,6 +42,7 @@ A small cross-platform desktop editor for quick drafts (meeting notes, pasted ch
 - `autosaveOffReason()` in `main.ts` decides what may autosave: only drafts inside the draft directory, with uniform line endings, not emptied, whose file still exists. Everything else saves only on an explicit Save, and leaving it with unsaved edits asks Save / Don't Save / Cancel (`settleCurrent`).
 - Saves say whether the user asked for them (`flush(explicit)`). Saves the app starts itself re-check at run time that autosave is still allowed.
 - Each shortcut has one owner. Actions with a menu item use the native accelerator, with the frontend fallback `keyForMenuAction` so it fires exactly once either way. The rest are bound by the frontend.
+- The one thing the app does on its own is re-read `settings.json` when the window regains focus, and only if the file changed (the user approved this on 2026-10-27). It is read-only and says something only when it applied a change or found a mistake. Do not add other automatic actions without asking.
 - `settings.json` is the one non-draft file the app reads or writes, matched by its exact path in `notes.rs`. No other `.json` may be opened.
 - Window and dialog API calls need a permission in `src-tauri/capabilities/default.json`.
 

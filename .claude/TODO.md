@@ -59,7 +59,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [x] Translate tabs to spaces (default `true`). Checked by the user on 2026-10-27; Tab now types spaces up to the next tab stop (or a tab character when `false`); with several lines selected it indents them, and Shift+Tab removes an indent. It no longer moves focus out of the editor.
 - [x] ~~Auto indent~~ Dropped 2026-10-27: Enter already keeps the indentation and continues Markdown lists, and nobody needs to turn that off.
 - [ ] A Settings dialog on top of the settings file (phase 2).
-- [ ] Optional: reload the settings automatically when the window regains focus.
+- [x] Reload the settings when the window regains focus (the quiet version, approved by the user 2026-10-27). Checked by the user on 2026-10-27: edit `settings.json` in another editor (say a font size), save it there, click back into Draftwick: a toast says the settings were reloaded and the change shows. Clicking back with no change does nothing; a mistake in the file toasts its line and keeps your old settings. It only reads the file (`settings_modified`), never writes it.
 
 ## Decisions needed (do NOT build these unless you say so)
 

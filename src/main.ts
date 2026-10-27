@@ -598,6 +598,7 @@ function syncSidebarTick() {
 async function openSettingsFile() {
   try {
     settingsPath = await api.prepareSettingsFile();
+    await rememberSettingsStamp(); // creating the file ourselves is not an outside edit
     await openPath(settingsPath);
   } catch (e) {
     toast(`Couldn't open settings: ${errorMessage(e)}`);
@@ -652,7 +653,35 @@ function applyAppearance(settings: api.Settings) {
   editor.refreshLayout();
 }
 
+/** When settings.json was last changed, as of the last time it was read (see reloadIfChanged). */
+let settingsStamp: number | null = null;
+
+async function rememberSettingsStamp() {
+  try {
+    settingsStamp = await api.settingsModified();
+  } catch {
+    /* without a stamp, the next focus simply reloads once */
+  }
+}
+
+/**
+ * When the window regains focus, re-reads settings.json only if it changed since it was last read
+ * (say it was edited in another editor). Quiet: nothing happens when the file is unchanged, and it
+ * never writes. A change or a mistake is reported by applySettings, like Settings > Reload.
+ */
+async function reloadIfChanged() {
+  if (!ready) return;
+  try {
+    if ((await api.settingsModified()) === settingsStamp) return;
+  } catch {
+    return;
+  }
+  await applySettings(true);
+}
+
 async function applySettings(announce: boolean) {
+  // Stamp first: an edit made while this runs is then noticed on the next focus.
+  await rememberSettingsStamp();
   try {
     const { settings, problems, valid } = await api.getSettings();
     if (!valid && announce) {
@@ -746,6 +775,7 @@ async function boot() {
       action.menu === null ? () => runAction(action.id) : () => keyForMenuAction(action.id);
   }
   installShortcuts(keys);
+  window.addEventListener("focus", () => void reloadIfChanged());
 
   try {
     await listen<string>("menu-action", (event) => {

@@ -62,6 +62,7 @@
     set_menu_text: ({ id, text }) => { state.menu[id] = text; },
     get_settings: () => ({ settings: state.settings, problems: [], valid: true }),
     check_settings: () => [],
+    settings_modified: () => files[`${CONFIG_DIR}/settings.json`]?.modified ?? null,
     prepare_settings_file: () => {
       const path = `${CONFIG_DIR}/settings.json`;
       files[path] ??= { text: '{\n  // stand-in settings file (not checked here)\n  // "theme": "light"\n}\n', modified: Date.now() };

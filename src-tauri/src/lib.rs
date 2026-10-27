@@ -19,6 +19,7 @@ pub fn run() {
             settings::get_settings,
             settings::check_settings,
             settings::prepare_settings_file,
+            settings::settings_modified,
             config::get_config,
             config::set_notes_dir,
             config::default_notes_dir,
