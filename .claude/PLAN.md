@@ -358,6 +358,10 @@ Rules:
 - Load only the CodeMirror extensions listed above. **Don't** use the `codemirror` meta-package `basicSetup` (it pulls in line numbers, fold gutter, and autocomplete); compose the extensions by hand.
 - Target: window visible with a usable editor in **< 500 ms** on a warm start, and idle memory **< 150 MB**. Measure once at M6 and report the numbers.
 
+**Measured on 2026-10-27** (release build of commit `a342b74`, this Ubuntu machine, a throwaway config with five small drafts, run under XWayland with `GDK_BACKEND=x11`; averaged over four to five warm runs):
+- **Start-up:** the window exists after about 70 ms, and the editor, sidebar and status bar are painted after **about 250 to 280 ms** (target under 500 ms: met). The paint time was found by polling the window's pixels, so it is accurate to a few milliseconds but not to a real Wayland session, which may differ slightly.
+- **Idle memory** (10 seconds after start, nothing typed), as proportional set size (each shared page counted once): **about 151 MB** for the three processes together (the app 49 MB, WebKitWebProcess 95 MB, WebKitNetworkProcess 12 MB). The target is under 150 MB, so this is **at the limit, about 1 MB over**. Most of it is the system WebKit that Tauri uses, not our code. Adding up each process's plain resident size gives 406 MB, but that counts shared libraries three times and is not what the machine really uses.
+
 ---
 
 ## 8. Out of scope for v1
