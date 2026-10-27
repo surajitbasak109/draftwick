@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Draftpad</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar" aria-label="Notes"></aside>
+      <main id="editor"></main>
+    </div>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+    <div id="switcher" hidden>
+      <div class="panel">
+        <input id="switcher-input" type="text" placeholder="Go to note…" autocomplete="off" spellcheck="false" />
+        <ul id="switcher-list"></ul>
+      </div>
+    </div>
+    <div id="rename" hidden>
+      <div class="panel">
+        <input id="rename-input" type="text" placeholder="New name (no extension)" autocomplete="off" spellcheck="false" />
+        <p id="rename-error" hidden></p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
