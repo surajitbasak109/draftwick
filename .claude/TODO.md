@@ -13,16 +13,18 @@ The checklist of work that is left. `.claude/PLAN.md` holds the design and the d
 
 ## To check in the real window (you)
 
+Checked by the user on 2026-10-27: the settings file, error underlines, apply-on-save, sidebar tick and memory, Quit, save on close, About. The app's files now live in `~/.config/draftwick/` (seen there: `config.json`, `settings.json`).
+
 The agent cannot see or click the real window, so these are yours. Everything below is built and tested outside it.
 
-- [ ] Settings > Open settings file opens `settings.json` in the editor, with colours (comments grey, names blue, numbers orange).
-- [ ] Deleting a comma in `settings.json` shows a red underline and a gutter marker with a message; adding it back clears them.
-- [ ] Saving `settings.json` applies the settings at once (a toast says so); a file with a syntax mistake gives a toast naming the line and keeps your old settings.
-- [ ] View > Show sidebar: the tick follows `Ctrl+B`, and the sidebar choice survives closing and reopening the app.
-- [ ] File > Quit (`Ctrl+Q`) quits; with unsaved edits in a file from outside the draft directory it asks first.
-- [ ] Closing the window right after typing in a normal draft saves it.
-- [ ] On the welcome screen (reset the throwaway config to see it) the File items are greyed out, Help still works, and "Use ~/Drafts instead" creates the folder only when clicked.
-- [ ] Help > About is centred in the window.
+- [x] Settings > Open settings file opens `settings.json` in the editor, with colours (comments grey, names blue, numbers orange).
+- [x] Deleting a comma in `settings.json` shows a red underline and a gutter marker with a message; adding it back clears them.
+- [x] Saving `settings.json` applies the settings at once (a toast says so); a file with a syntax mistake gives a toast naming the line and keeps your old settings.
+- [x] View > Show sidebar: the tick follows `Ctrl+B`, and the sidebar choice survives closing and reopening the app.
+- [x] File > Quit (`Ctrl+Q`) quits; with unsaved edits in a file from outside the draft directory it asks first.
+- [x] Closing the window right after typing in a normal draft saves it.
+- [x] On the welcome screen (reset the throwaway config to see it) the File items are greyed out, Help still works, and "Use ~/Drafts instead" creates the folder only when clicked. Checked by the user on 2026-10-27.
+- [x] Help > About is centred in the window.
 
 ## M6: packaging
 
@@ -30,7 +32,7 @@ The agent cannot see or click the real window, so these are yours. Everything be
 - [ ] **Snap package (on hold: ask the user again when they bring up snap).** Decisions to put to them then: (1) may the agent install `snapcraft`, which needs LXD or Multipass, or `--destructive-mode` to build on this machine (suggested: `sudo snap install snapcraft --classic` plus LXD); (2) confinement: strict with the `home` interface (suggested; a draft directory outside the home folder would be blocked) or `classic` (needs a manual Snap Store review); (3) a local `.snap` file only (suggested) or publishing to the Snap Store (never without being asked). Also needs a `snap/snapcraft.yaml` in the repo.
 - [ ] Install the `.deb` on Ubuntu: Draftwick appears in the launcher and starts. Built, needs your check. Also run the AppImage once.
 - [ ] Measure start-up (target under 500 ms on a warm start) and idle memory (under 150 MB); write the numbers into `.claude/PLAN.md`.
-- [ ] Turn the content-security policy on (it is `null` now) and check that the app and `pnpm tauri dev` still work.
+- [x] Content-security policy is on (own files only; inline styles allowed for CodeMirror; IPC allowed). Checked by the user in a release build and in `pnpm tauri dev` on 2026-10-27.
 - [ ] Replace the generated placeholder icon with a real one.
 
 ## Menu items held back (see M7 in `.claude/PLAN.md` for the reasons)
