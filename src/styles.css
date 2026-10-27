@@ -11,6 +11,11 @@
   --hl-link: #6fb7a8;
   --hl-code: #d9a86c;
   --hl-muted: #8a8f98;
+  --hl-property: #7fb2ff;
+  --hl-string: #9ccf8e;
+  --hl-number: #d9a86c;
+  --hl-keyword: #c792ea;
+  --hl-comment: #7d8590;
   --toast-bg: #2c2e33;
   --mono: "JetBrains Mono", "Ubuntu Mono", "DejaVu Sans Mono", monospace;
   --ui: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
@@ -31,6 +36,11 @@
     --hl-link: #0f766e;
     --hl-code: #b45309;
     --hl-muted: #6b7280;
+    --hl-property: #1d4ed8;
+    --hl-string: #15803d;
+    --hl-number: #b45309;
+    --hl-keyword: #7e22ce;
+    --hl-comment: #6b7280;
     --toast-bg: #24272b;
     color-scheme: light;
   }

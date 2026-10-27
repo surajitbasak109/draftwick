@@ -24,7 +24,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 | Folder choice | Welcome screen with **"Choose draft directory…"** (primary) and **"Use ~/Drafts instead"** (secondary link); `~/Drafts` is created only when that link is clicked | Replaces the earlier auto-dialog + silent `~/Drafts` fallback |
 | New-note filename | **`YYYY-MM-DD HH-mm.md`** (local time), e.g. `2026-10-27 14-05.md` | `:` is illegal on Windows and shows oddly on macOS |
 | Filename collision | Append ` (2)`, ` (3)`, … before `.md` | Two notes in the same minute must not overwrite each other |
-| Saving | **Autosave** 500 ms after the last keystroke, plus on blur/close, **only for notes inside the draft directory**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
+| Saving | **Autosave** after the user stops typing (default **5 seconds**, configurable from 500 ms to 30 s, see M9; every keystroke restarts the wait), and always on blur, switching drafts and close, **only for notes inside the draft directory**; `Ctrl+S` forces a save | Drafts must never be lost (matches the Sublime "just close it" habit) |
 | Files outside the draft directory | **Never autosaved.** Saved only with `Ctrl+S`; leaving or closing with unsaved edits asks **Save / Don't Save / Cancel**. The title shows "(autosave off)" | Consent rule: don't write to a file the user opened from elsewhere unless they ask |
 | Deleted or moved files | **A file that disappears while it is open is never silently recreated.** Saving asks **Save again / Close without saving / Keep editing**; "Keep editing" is the focused button because the prompt can appear mid-typing, so a stray Enter is harmless. After Keep editing, autosave stays off until the user presses `Ctrl+S`, which recreates the file. Rust's `write_note` takes `create_if_missing` and reports `kind: "missing"` | A note the user deleted should stay deleted unless they say otherwise |
 | Implicit vs explicit saves | Saves started by the app (typing timer, blur, leaving a note) re-check at run time that autosave is still allowed; only `Ctrl+S` or answering a prompt is an explicit save | A save waiting in the queue must not act on an outdated situation |
@@ -157,7 +157,7 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 - **Done when:** deleting `config.json` and relaunching shows the welcome screen and opens **no** dialog; "Choose draft directory…" opens the picker and cancelling it leaves the welcome screen up; "Use ~/Drafts instead" creates `~/Drafts` and opens the editor; relaunching doesn't show the welcome screen again.
 
 ### M3: Create + autosave
-- `create_note`, `write_note`, `autosave.ts` (500 ms debounce, flush on blur, `Ctrl+S`, `close-requested`).
+- `create_note`, `write_note`, `autosave.ts` (debounced autosave, 5 s by default and configurable, see M9; flush on blur, `Ctrl+S`, `close-requested`).
 - The first keystroke in an unsaved note calls `create_note`, and later saves call `write_note`.
 - **Done when:** typing creates `2026-10-27 14-05.md` in the draft directory; a second note in the same minute becomes `2026-10-27 14-05 (2).md`; closing the window mid-typing loses nothing; opening the app without typing creates no file.
 
@@ -202,7 +202,7 @@ Settled with the user: "Open/Set draft directory" is **one item**, and that is i
 | View | Show sidebar | `Ctrl+B` | **Built** | A tick item; the tick follows the real state, including after `Ctrl+B` |
 | View | Toggle wrap | | Held, easy | Decide together with the "word wrap column" setting (M9) |
 | View | Enter full screen | `F11` | Held, easy | Needs keys without `Ctrl` in the shortcut code, a label that flips to "Exit full screen", and a check on GNOME |
-| Settings | (menu) | | Held | See M9 |
+| Settings | Open settings file, Reload settings | | **Built** | The first part of M9; the other settings are held |
 | Help | About | | **Built** | In-app dialog, centred |
 | Help | Keyboard shortcuts | | **Built** | Generated from the action table |
 
@@ -268,7 +268,7 @@ Rules:
 
 - **Done when:** `Ctrl+B` and the menu item both toggle the sidebar, each press toggles it exactly once, the state is remembered across launches, and hiding or showing it never changes the open draft.
 
-### M9: Settings (planned, not started; held on purpose)
+### M9: Settings (started: the settings file, the Settings menu and the autosave delay are built; the other settings are held)
 **Requested by the user:** a Settings menu and these settings, with more to be added later.
 
 **The user's question: a settings UI, or a settings file (like VS Code / Sublime)?** Recommendation: **a settings file first, a UI later.**
@@ -276,16 +276,25 @@ Rules:
 - **Format: JSON, with comments allowed** (like Sublime and VS Code). Rust reads it with the `json5` crate. YAML is more error-prone to hand-edit (indentation) and `serde_yaml` is no longer maintained; TOML would also work (comments, Rust-native) if the user prefers it.
 - **Where:** `settings.json` in the app's config folder, next to `config.json`.
 - **The app never rewrites the user's file**, so their comments and layout survive. Defaults live in the code; the file only holds overrides.
-- **Consent rule:** the file is **not** created at launch. It is created, filled with the defaults as comments, only when the user chooses **Settings → Open settings file** for the first time. That item opens it in the user's own editor.
+- **Consent rule:** the file is **not** created at launch. It is created, filled with the defaults as comments, only when the user chooses **Settings → Open settings file** for the first time. That item opens it in **Draftwick's own editor** (see below).
 - **Reloading:** there is no file watcher (out of scope for v1), so **Settings → Reload settings** applies changes. (Reloading when the window regains focus is a possible later addition.)
 - **A bad value** is ignored (the default is used) and a toast names the key; it must never crash the app or overwrite the file.
 - **One table, like the actions:** a single table in Rust lists each setting (key, type, default, valid range) and is exposed to the frontend, so adding a setting later is one entry plus the code that applies it.
 - **Phase 2: a Settings dialog** that edits the same file. Writing it back would lose comments, so this needs a format-preserving approach or a decision to accept that.
 
+**What is built so far** (`src-tauri/src/settings.rs`, plus `get_settings` and `prepare_settings_file`): the settings file is `settings.json` in the app's config folder (`~/.config/dev.draftwick.app/`), read with `json5` so comments and trailing commas are allowed. **Settings → Open settings file** creates it on first use (every setting shown as a commented-out default; an existing file is never touched) and opens it in Draftwick's own editor. **Saving it applies the settings immediately**, and **Settings → Reload settings** re-reads the file at any time and says what changed. Problems are shown, not silent: an out-of-range value is clamped, a value of the wrong type falls back to the default, broken syntax uses all defaults, and an **unknown setting name is reported** so typos are noticed. The app only writes the file when the user saves their own edits. Adding a setting later means one more key in `settings.rs` plus the code that applies it.
+
+**Why the settings file opens inside Draftwick, not in "the user's editor":** the first version handed the file to the system, which opens whatever the OS associates with `.json`. On the user's machine that is Firefox, so choosing the menu item opened a browser tab instead of an editor (the odd `file:///run/user/1000/doc/…` address is the system's file-sharing portal for a sandboxed browser). That depends on each machine's setup and cannot be fixed from inside the app, so the file now opens in Draftwick's own editor. A side benefit is that it works the same on every operating system.
+
+**Syntax highlighting for the settings file** (built): it is shown with colours for property names, strings, numbers, `true`/`false`/`null`, comments (including multi-line `/* ... */` ones) and punctuation, in both the dark and light themes. CodeMirror's own JSON grammar was tried first and rejected: it does not understand comments and flags every comment character as an error (123 errors on the default file), so a small purpose-built tokenizer (`src/jsonc.ts`) is used instead. It only colours text; it does not validate (the Rust side reports problems). A commented-out setting is one grey comment, and removing the `//` turns it into a coloured setting immediately. The Markdown colours are unchanged.
+
+**An exception to "Draftwick edits only `.md` and `.txt`":** the settings file is the **one** other file the app will read or write. It is matched by its **exact path** inside the app's config folder, never by its extension, so no other `.json` (or any other file) can be opened or saved. It behaves like a file outside the draft directory: autosave is off, it is saved only with `Ctrl+S` or the Save button of the prompt, leaving it with unsaved edits asks first, it cannot be renamed, and it is not listed among the drafts. "Open settings file" waits for a draft directory (the editor is hidden on the welcome screen); "Reload settings" works from the start.
+
 **The settings** (defaults as given by the user, or proposed by me and **confirmed by the user**):
 
 | Setting | Key | Default | Notes |
 |---|---|---|---|
+| **Autosave delay** | `autosave_delay_ms` | **5000** (5 s) | **Built.** Allowed range **500 to 30000**; a value outside it is clamped and reported. How long to wait after the last keystroke; every keystroke restarts the wait. Drafts are still saved immediately when you switch drafts, lose focus or quit, so a long delay only affects how much typing is at risk if the app or computer stops suddenly. |
 | Word wrap column | `wrap_column` | 70 | Soft wrap at this width, not a hard line break (confirm). Interacts with View → Toggle wrap; decide together. |
 | Font family | `font_family` | system default text editor font | Use the generic `monospace`, which WebKitGTK maps to the system's monospace font. Today's list is JetBrains Mono, Ubuntu Mono, DejaVu Sans Mono. |
 | Font size | `font_size` | 14 px | The editor is currently 15 px, so the default changes. |
@@ -309,7 +318,7 @@ Rules:
   - `rename_note` validation rejects each forbidden char, empty names, and existing targets.
   - `list_notes` ignores other extensions and dotfiles and sorts by mtime descending (use a `tempfile` dev-dependency).
 - **Manual checklist**: run through every milestone's "Done when" in `pnpm tauri dev` before calling the work finished. Report any that couldn't be checked.
-- No frontend test framework in v1.
+- Frontend: no test framework in v1, but pure logic can have plain Node tests. `pnpm test` runs `tests/*.test.mjs` with Node's built-in runner (currently the settings-file tokenizer in `src/jsonc.ts`, including a check against the real default settings file).
 
 ---
 

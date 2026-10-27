@@ -2,6 +2,7 @@ mod config;
 mod error;
 mod menu;
 mod notes;
+mod settings;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +15,8 @@ pub fn run() {
             menu::get_about,
             menu::set_menu_enabled,
             menu::set_menu_checked,
+            settings::get_settings,
+            settings::prepare_settings_file,
             config::get_config,
             config::set_notes_dir,
             config::default_notes_dir,

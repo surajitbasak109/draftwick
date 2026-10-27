@@ -56,7 +56,7 @@ impl Action {
 }
 
 /// Top-level menus, in display order.
-const MENUS: [&str; 3] = ["File", "View", "Help"];
+const MENUS: [&str; 4] = ["File", "View", "Settings", "Help"];
 
 pub const ACTIONS: &[Action] = &[
     // ---- File ----
@@ -78,6 +78,11 @@ pub const ACTIONS: &[Action] = &[
     // ---- View ----
     // Shows a tick while the sidebar is visible; the frontend keeps the tick in step.
     Action::new("toggle_sidebar", "Show sidebar", Some("CmdOrCtrl+B"), Some("View"), true).ticked(),
+    // ---- Settings ----
+    // The settings file opens in the editor, which is hidden on the welcome screen, so opening it
+    // waits for a draft directory. Reloading needs no editor, so it works from the start.
+    Action::new("open_settings", "Open settings file", None, Some("Settings"), true),
+    Action::new("reload_settings", "Reload settings", None, Some("Settings"), false),
     // ---- Keyboard shortcut only, for now ----
     Action::new("quick_switcher", "Go to draft", Some("CmdOrCtrl+P"), None, true),
     Action::new("rename", "Rename draft", Some("CmdOrCtrl+Shift+R"), None, true),
@@ -264,6 +269,7 @@ mod tests {
             ["New file", "Open", "Open/Set draft directory", "Save", "Close", "Quit"]
         );
         assert_eq!(menu_labels("View"), ["Show sidebar"]);
+        assert_eq!(menu_labels("Settings"), ["Open settings file", "Reload settings"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
     }
 
@@ -285,18 +291,20 @@ mod tests {
 
     #[test]
     fn items_in_a_menu_that_have_no_shortcut_are_still_reachable() {
-        // The Help items are menu-only; every other menu item must also have a shortcut.
+        // The Help and Settings items are menu-only; every other menu item must also have a
+        // shortcut.
         for action in ACTIONS.iter().filter(|a| a.menu.is_some()) {
-            if action.menu != Some("Help") {
+            if !matches!(action.menu, Some("Help") | Some("Settings")) {
                 assert!(action.accelerator.is_some(), "{} has no shortcut", action.id);
             }
         }
     }
 
     #[test]
-    fn only_help_and_quit_stay_enabled_without_a_notes_folder() {
+    fn only_help_reload_settings_and_quit_stay_enabled_without_a_draft_directory() {
         for action in ACTIONS {
-            let stays_enabled = action.menu == Some("Help") || action.id == "quit";
+            let stays_enabled =
+                action.menu == Some("Help") || matches!(action.id, "reload_settings" | "quit");
             assert_eq!(!action.needs_folder, stays_enabled, "{}", action.id);
         }
     }

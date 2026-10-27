@@ -52,6 +52,25 @@ export interface ActionInfo {
 
 export const getActions = () => call<ActionInfo[]>("get_actions");
 
+/** User settings, from settings.json (see settings.rs). */
+export interface Settings {
+  /** How long to wait after the last keystroke before a draft is autosaved. */
+  autosave_delay_ms: number;
+}
+
+export interface LoadedSettings {
+  settings: Settings;
+  /** Things in the file that were ignored or adjusted, worded for the user. */
+  problems: string[];
+}
+
+export const getSettings = () => call<LoadedSettings>("get_settings");
+/**
+ * Creates settings.json if it does not exist yet (with every setting commented out) and returns
+ * its path, so it can be opened in the editor like any other file.
+ */
+export const prepareSettingsFile = () => call<string>("prepare_settings_file");
+
 export interface AboutInfo {
   name: string;
   version: string;

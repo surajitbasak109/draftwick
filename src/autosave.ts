@@ -14,6 +14,8 @@ export interface Autosave {
   flush(explicit?: boolean): Promise<void>;
   /** Forget pending edits, e.g. right after loading a different document. */
   markClean(): void;
+  /** Changes how long to wait after the last edit. Applies from the next edit on. */
+  setDelay(ms: number): void;
   readonly dirty: boolean;
 }
 
@@ -33,6 +35,7 @@ interface Options {
 
 export function createAutosave(opts: Options): Autosave {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let delayMs = opts.delayMs;
   let dirty = false;
   let version = 0;
   // Saves run strictly one after another so the first save (which creates the file)
@@ -64,11 +67,14 @@ export function createAutosave(opts: Options): Autosave {
       version++;
       setDirty(true);
       clearTimeout(timer);
-      if (opts.isEnabled()) timer = setTimeout(() => void runSave(false), opts.delayMs);
+      if (opts.isEnabled()) timer = setTimeout(() => void runSave(false), delayMs);
     },
     flush(explicit = true) {
       clearTimeout(timer);
       return dirty ? runSave(explicit) : queue;
+    },
+    setDelay(ms) {
+      delayMs = ms;
     },
     markClean() {
       clearTimeout(timer);

@@ -8,6 +8,7 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 use crate::config;
+use crate::settings;
 use crate::error::{AppError, AppResult};
 
 const NOTE_EXTS: [&str; 2] = ["md", "txt"];
@@ -66,7 +67,7 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> AppResult<()> {
     Ok(())
 }
 
-fn meta_for(path: &Path) -> AppResult<NoteMeta> {
+pub(crate) fn meta_for(path: &Path) -> AppResult<NoteMeta> {
     let modified_ms = fs::metadata(path)?
         .modified()?
         .duration_since(UNIX_EPOCH)
@@ -211,14 +212,30 @@ pub fn list_notes(app: AppHandle) -> AppResult<Vec<NoteMeta>> {
     list_in(&config::notes_dir(&app)?)
 }
 
+// Drafts must be .md or .txt. The settings file is the one other file the app edits, and it is
+// matched by its exact path, so no other .json (or anything else) can be read or written.
 #[tauri::command]
-pub fn read_note(path: String) -> AppResult<String> {
-    read_at(Path::new(&path))
+pub fn read_note(app: AppHandle, path: String) -> AppResult<String> {
+    let path = Path::new(&path);
+    if settings::is_settings_file(&app, path) {
+        return settings::read_file(path);
+    }
+    read_at(path)
 }
 
 #[tauri::command]
-pub fn write_note(path: String, content: String, create_if_missing: bool) -> AppResult<NoteMeta> {
-    write_at(Path::new(&path), &content, create_if_missing)
+pub fn write_note(
+    app: AppHandle,
+    path: String,
+    content: String,
+    create_if_missing: bool,
+) -> AppResult<NoteMeta> {
+    let path = Path::new(&path);
+    if settings::is_settings_file(&app, path) {
+        settings::write_file(path, &content, create_if_missing)?;
+        return meta_for(path);
+    }
+    write_at(path, &content, create_if_missing)
 }
 
 #[tauri::command]

@@ -5,6 +5,7 @@ import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { tags as t } from "@lezer/highlight";
+import { jsonc } from "./jsonc";
 import type { Eol } from "./lineEndings";
 
 export interface EditorHandle {
@@ -48,6 +49,17 @@ const highlight = HighlightStyle.define([
   { tag: [t.processingInstruction, t.contentSeparator], color: "var(--hl-muted)" },
 ]);
 
+// Colours for the settings file (JSON with comments). Like the Markdown ones, they come from CSS
+// variables so dark and light follow the operating system.
+const jsonHighlight = HighlightStyle.define([
+  { tag: t.propertyName, color: "var(--hl-property)" },
+  { tag: t.string, color: "var(--hl-string)" },
+  { tag: t.number, color: "var(--hl-number)" },
+  { tag: t.atom, color: "var(--hl-keyword)" },
+  { tag: t.comment, color: "var(--hl-comment)", fontStyle: "italic" },
+  { tag: [t.bracket, t.punctuation], color: "var(--hl-muted)" },
+]);
+
 function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean): Extension[] {
   const isMarkdown = ext === "md";
   return [
@@ -63,8 +75,9 @@ function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean
       ...historyKeymap,
       ...defaultKeymap,
     ]),
-    isMarkdown ? markdown({ base: markdownLanguage }) : [],
-    isMarkdown ? syntaxHighlighting(highlight) : [],
+    isMarkdown ? [markdown({ base: markdownLanguage }), syntaxHighlighting(highlight)] : [],
+    // The settings file is the only .json the app opens (see settings.rs).
+    ext === "json" ? [jsonc, syntaxHighlighting(jsonHighlight)] : [],
     theme,
     EditorView.updateListener.of((u) => {
       if (u.docChanged && !isLoading()) handlers.onChange();

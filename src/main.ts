@@ -59,6 +59,9 @@ const EMPTY_REASON = "it is empty, which would erase the text in the saved file"
  */
 function autosaveOffReason(c: Current): string | null {
   if (c.missing) return "its file was deleted or moved";
+  if (c.path !== null && c.path === settingsPath) {
+    return "it is the settings file, which is only saved when you choose to save it";
+  }
   if (!c.managed) return "it is outside your draft directory";
   if (c.mixedEol) return "it mixes line endings";
   // Clearing a note must not wipe its file behind the user's back; only Ctrl+S may do that.
@@ -68,17 +71,19 @@ function autosaveOffReason(c: Current): string | null {
 
 let current: Current = NEW_NOTE;
 let notes: api.NoteMeta[] = [];
+/** Path of settings.json, known once the user has opened it from the Settings menu. */
+let settingsPath: string | null = null;
 
 // ---------- small UI helpers ----------
 
 const toastEl = document.querySelector<HTMLElement>("#toast")!;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-function toast(message: string) {
+function toast(message: string, stayMs = 4000) {
   toastEl.textContent = message;
   toastEl.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toastEl.hidden = true), 4000);
+  toastTimer = setTimeout(() => (toastEl.hidden = true), stayMs);
 }
 
 function errorMessage(e: unknown): string {
@@ -115,8 +120,11 @@ function onEdited() {
 
 // ---------- editor, autosave, sidebar ----------
 
+// Replaced at startup by the autosave_delay_ms setting (default 5 seconds, see settings.rs).
+const DEFAULT_AUTOSAVE_DELAY_MS = 5000;
+
 const autosave = createAutosave({
-  delayMs: 500,
+  delayMs: DEFAULT_AUTOSAVE_DELAY_MS,
   isEnabled: () => autosaveOffReason(current) === null,
   save: saveCurrent,
   onDirtyChange: updateTitle,
@@ -200,6 +208,8 @@ async function saveCurrent(explicit: boolean): Promise<boolean> {
   }
   updateTitle();
   await refreshSidebar();
+  // Saving the settings file is the user's go-ahead to apply it; no separate reload needed.
+  if (current.path !== null && current.path === settingsPath) void applySettings(true);
   return true;
 }
 
@@ -308,7 +318,9 @@ async function openPath(path: string) {
     sidebar.render(notes, current.path);
     editor.focus();
     const reason = autosaveOffReason(current);
-    if (reason !== null) {
+    if (path === settingsPath) {
+      toast("Editing your settings. Press Ctrl+S to save; they apply as soon as you save.", 7000);
+    } else if (reason !== null) {
       const convert = mixed ? ` Saving converts every line ending to ${eolName(eol)}.` : "";
       toast(`Autosave is off for this file because ${reason}. Press Ctrl+S to save.${convert}`);
     }
@@ -359,6 +371,10 @@ async function renameCurrent(stem: string) {
 }
 
 function startRename() {
+  if (current.path !== null && current.path === settingsPath) {
+    toast("The settings file can't be renamed");
+    return;
+  }
   if (current.path === null) {
     toast("Type something first; the draft is created on the first keystroke");
     return;
@@ -432,6 +448,8 @@ const handlers: Record<string, () => void> = {
       .then((info) => aboutDialog.open(info))
       .catch((e) => toast(`Couldn't open About: ${errorMessage(e)}`)),
   shortcuts: () => shortcutsHelp.open(actionTable),
+  open_settings: () => void openSettingsFile(),
+  reload_settings: () => void applySettings(true),
 };
 
 /** Keeps the tick on View > Show sidebar in step with the sidebar. */
@@ -439,6 +457,45 @@ function syncSidebarTick() {
   void api
     .setMenuChecked("toggle_sidebar", sidebar.isVisible())
     .catch((e) => toast(`Couldn't update the menu: ${errorMessage(e)}`));
+}
+
+/**
+ * Opens settings.json in Draftwick's own editor, creating it first if this is the first time.
+ * (Handing it to the system would open whatever the OS associates with .json, often a browser.)
+ */
+async function openSettingsFile() {
+  try {
+    settingsPath = await api.prepareSettingsFile();
+    await openPath(settingsPath);
+  } catch (e) {
+    toast(`Couldn't open settings: ${errorMessage(e)}`);
+  }
+}
+
+/** "5 seconds", "2.5 seconds", "500 milliseconds"... */
+function describeDelay(ms: number): string {
+  if (ms < 1000) return `${ms} milliseconds`;
+  const seconds = ms / 1000;
+  return `${Number.isInteger(seconds) ? seconds : seconds.toFixed(1)} second${seconds === 1 ? "" : "s"}`;
+}
+
+/**
+ * Reads settings.json (a missing file just means the defaults) and applies it. Anything in the
+ * file that had to be ignored or adjusted is shown, so a typo doesn't pass silently. `announce`
+ * is true when the user asked for the reload, so they get confirmation.
+ */
+async function applySettings(announce: boolean) {
+  try {
+    const { settings, problems } = await api.getSettings();
+    autosave.setDelay(settings.autosave_delay_ms);
+    if (problems.length > 0) {
+      toast(problems.join(" "), 9000);
+    } else if (announce) {
+      toast(`Settings reloaded. Drafts save ${describeDelay(settings.autosave_delay_ms)} after you stop typing.`);
+    }
+  } catch (e) {
+    toast(`Couldn't load settings: ${errorMessage(e)}`);
+  }
 }
 
 /** Shows or hides the sidebar, and remembers the choice for the next launch. */
@@ -484,6 +541,7 @@ function keyForMenuAction(id: string) {
 
 async function boot() {
   actionTable = await api.getActions();
+  await applySettings(false);
 
   // Every shortcut is bound here. Those whose action has a native menu item are normally taken
   // by that item's accelerator before they reach the page; see keyForMenuAction.
