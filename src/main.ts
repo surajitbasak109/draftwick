@@ -437,21 +437,43 @@ function runAction(id: string) {
   action();
 }
 
+/** When each action last arrived from the native menu (click or accelerator). */
+const lastFromMenu = new Map<string, number>();
+const MENU_WINDOW_MS = 150;
+
+/**
+ * A key press for an action that lives in the native menu. Normally the menu's accelerator takes
+ * the key first and this is never reached. If the press does reach the page, either the menu
+ * is about to report it too (so do nothing) or it never will (so run it ourselves). Waiting a
+ * moment for the menu's event keeps the action from running twice, or not at all.
+ */
+function keyForMenuAction(id: string) {
+  const fresh = (t: number | undefined, since: number) => t !== undefined && t >= since;
+  if (fresh(lastFromMenu.get(id), performance.now() - MENU_WINDOW_MS)) return;
+  const pressedAt = performance.now();
+  setTimeout(() => {
+    if (!fresh(lastFromMenu.get(id), pressedAt)) runAction(id);
+  }, MENU_WINDOW_MS);
+}
+
 async function boot() {
   actionTable = await api.getActions();
 
-  // A shortcut whose action has a native menu item is owned by that item's accelerator. Binding
-  // it here as well would make it fire twice, so only the rest are bound in the frontend.
+  // Every shortcut is bound here. Those whose action has a native menu item are normally taken
+  // by that item's accelerator before they reach the page; see keyForMenuAction.
   const keys: Record<string, () => void> = {};
   for (const action of actionTable) {
-    if (action.accelerator !== null && action.menu === null) {
-      keys[toCombo(action.accelerator)] = () => runAction(action.id);
-    }
+    if (action.accelerator === null) continue;
+    keys[toCombo(action.accelerator)] =
+      action.menu === null ? () => runAction(action.id) : () => keyForMenuAction(action.id);
   }
   installShortcuts(keys);
 
   try {
-    await listen<string>("menu-action", (event) => runAction(event.payload));
+    await listen<string>("menu-action", (event) => {
+      lastFromMenu.set(event.payload, performance.now());
+      runAction(event.payload);
+    });
   } catch (e) {
     toast(`The menu is unavailable: ${errorMessage(e)}`);
   }
