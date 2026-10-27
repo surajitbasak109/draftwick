@@ -2,7 +2,7 @@
 
 A small cross-platform desktop editor for quick drafts (meeting notes, pasted chat or web text), built to replace Sublime Text for that one job. Tauri 2 (Rust) + vanilla TypeScript + CodeMirror 6, bundled with Vite. It edits Markdown and text drafts only (`.md`, `.txt`), with one exception: its own `settings.json`.
 
-`PLAN.md` is the spec and the history. **Read its "Status and next steps" section first.** It was written before the build and updated as decisions were made, so where an older section disagrees with a newer note (M7 to M9, the "Decided" lines), the newer one wins.
+`.claude/PLAN.md` is the spec and the history. **Read its "Status and next steps" section first.** `.claude/TODO.md` is the checklist of what is left (see "The task list" below). It was written before the build and updated as decisions were made, so where an older section disagrees with a newer note (M7 to M9, the "Decided" lines), the newer one wins.
 
 ## Rules from the user (follow these)
 
@@ -11,6 +11,10 @@ A small cross-platform desktop editor for quick drafts (meeting notes, pasted ch
 - **Say "draft" and "draft directory"** in anything the user sees, not "note" or "notes folder". Internal names keep the old words on purpose (`notes_dir` in `config.json`, `notes.rs`, `NoteMeta`): renaming them would break existing config files for no benefit.
 - **Commit only when asked, and never push** (the repo has no remote). One commit per request, with a message that explains the why; see `git log` for the style.
 - Ask rather than guess on product decisions. The plan records the ones already made.
+
+## The task list
+
+`.claude/TODO.md` holds the pending work as checkboxes. When the user asks you to do an item, do it, and tick its box (`- [x]`) **only when it is finished and verified**: it builds, the checks pass, and you tested it. If it can only be confirmed in the real window, leave the box open and write "built, needs your check" next to it; the user ticks it. Add items the user asks for under the right heading, and do not build anything under "Decisions needed" unless they say so. `.claude/PLAN.md` keeps the design and the decisions; `.claude/TODO.md` keeps what remains.
 
 ## Commands
 

@@ -4,4 +4,6 @@ src-tauri/target
 src-tauri/gen
 *.log
 .DS_Store
-.claude/
+# Local agent state (settings.local.json, caches...) is ignored; the markdown docs in .claude/ are tracked
+.claude/*
+!.claude/*.md
