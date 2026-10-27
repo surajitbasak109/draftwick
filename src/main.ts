@@ -9,7 +9,7 @@ import { createSwitcher } from "./switcher";
 import { installShortcuts } from "./shortcuts";
 import "./styles.css";
 
-const APP_NAME = "Draftpad";
+const APP_NAME = "Draftwick";
 
 interface Current {
   /** null until the first keystroke creates the file on disk. */

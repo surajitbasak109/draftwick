@@ -1,11 +1,11 @@
-# Draftpad — Implementation Plan
+# Draftwick — Implementation Plan
 
 A fast, minimal desktop editor for quick drafts (meeting notes, pasted chat/web text).
 It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 
 > **For the implementing agent (Sonnet 5.5):** every decision below is already made.
 > Don't revisit the stack or the behavior. If something is truly blocked, stop and ask the user.
-> "Draftpad" is a working name, so keep it in one place (`tauri.conf.json` `productName`) to make renaming easy.
+> "Draftwick" is a working name, so keep it in one place (`tauri.conf.json` `productName`) to make renaming easy.
 
 ---
 
@@ -48,7 +48,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 ### Editor
 - CodeMirror 6 with: markdown highlighting (for `.md`; plain text for `.txt`), line wrapping ON, history (undo/redo), search (`Ctrl+F`, replace `Ctrl+H`), multiple cursors (`Ctrl+click`, `Ctrl+D` select next occurrence), bracket/markdown-list continuation on Enter, no line numbers by default.
 - Monospace font stack: `"JetBrains Mono", "Ubuntu Mono", "DejaVu Sans Mono", monospace`, 15px.
-- Window title: `<filename> — Draftpad`, with a `•` prefix while there are unsaved changes.
+- Window title: `<filename> — Draftwick`, with a `•` prefix while there are unsaved changes.
 
 ### Keyboard shortcuts
 | Keys | Action |
@@ -70,7 +70,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files.
 ## 3. Project structure
 
 ```
-draftpad/
+draftwick/
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
@@ -131,7 +131,7 @@ Do them in order. Each one ends in a working, runnable app.
 sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 - Rust via `rustup` (stable), Node 20+.
-- Scaffold: `pnpm create tauri-app draftpad -- --template vanilla-ts`, then `pnpm add @codemirror/state @codemirror/view @codemirror/commands @codemirror/search @codemirror/language @codemirror/lang-markdown @tauri-apps/api @tauri-apps/plugin-dialog` and `cargo add tauri-plugin-dialog chrono dirs thiserror serde --features serde/derive` in `src-tauri`.
+- Scaffold: `pnpm create tauri-app draftwick -- --template vanilla-ts`, then `pnpm add @codemirror/state @codemirror/view @codemirror/commands @codemirror/search @codemirror/language @codemirror/lang-markdown @tauri-apps/api @tauri-apps/plugin-dialog` and `cargo add tauri-plugin-dialog chrono dirs thiserror serde --features serde/derive` in `src-tauri`.
 - Note: the first Rust build takes several minutes, so run it in the background.
 - **Done when:** `pnpm tauri dev` opens the template window.
 
@@ -159,8 +159,8 @@ sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential cur
 
 ### M6: Packaging
 - `pnpm tauri build` → `.deb` and `.AppImage` in `src-tauri/target/release/bundle/`.
-- Set `productName`, `identifier` (`dev.draftpad.app`), version `0.1.0`, and an app icon (`pnpm tauri icon <png>`; a simple generated placeholder is fine).
-- **Done when:** the `.deb` installs on Ubuntu, Draftpad appears in the app launcher, and launches.
+- Set `productName`, `identifier` (`dev.draftwick.app`), version `0.1.0`, and an app icon (`pnpm tauri icon <png>`; a simple generated placeholder is fine).
+- **Done when:** the `.deb` installs on Ubuntu, Draftwick appears in the app launcher, and launches.
 
 ---
 

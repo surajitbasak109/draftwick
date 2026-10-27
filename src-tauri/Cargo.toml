@@ -1,11 +1,11 @@
 [package]
-name = "draftpad"
+name = "draftwick"
 version = "0.1.0"
 description = "A fast, minimal editor for quick Markdown and text drafts"
 edition = "2021"
 
 [lib]
-name = "draftpad_lib"
+name = "draftwick_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

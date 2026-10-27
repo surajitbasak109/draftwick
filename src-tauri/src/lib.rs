@@ -17,5 +17,5 @@ pub fn run() {
             notes::rename_note,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Draftpad");
+        .expect("error while running Draftwick");
 }
