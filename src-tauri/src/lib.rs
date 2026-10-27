@@ -16,6 +16,7 @@ pub fn run() {
             menu::set_menu_enabled,
             menu::set_menu_checked,
             settings::get_settings,
+            settings::check_settings,
             settings::prepare_settings_file,
             config::get_config,
             config::set_notes_dir,

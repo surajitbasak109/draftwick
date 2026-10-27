@@ -307,6 +307,30 @@ body {
   display: none;
 }
 
+/* ---------- CodeMirror lint: underlines, gutter and hover messages (settings file) ---------- */
+
+.cm-tooltip {
+  background: var(--bg-side) !important;
+  color: var(--fg);
+  border: 1px solid var(--border) !important;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.cm-tooltip .cm-diagnostic {
+  padding: 6px 10px;
+  max-width: 420px;
+  line-height: 1.45;
+}
+
+.cm-diagnostic-error {
+  border-left: 3px solid #ef6b6b;
+}
+
+.cm-diagnostic-warning {
+  border-left: 3px solid #e0a43a;
+}
+
 /* ---------- CodeMirror search panel ---------- */
 
 .cm-panels {

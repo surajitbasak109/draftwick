@@ -5,6 +5,8 @@ import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { tags as t } from "@lezer/highlight";
+import { linter, lintGutter } from "@codemirror/lint";
+import type { SettingsDiagnostic } from "./api";
 import { jsonc } from "./jsonc";
 import type { Eol } from "./lineEndings";
 
@@ -21,6 +23,8 @@ export interface EditorHandle {
 interface Handlers {
   onChange(): void;
   onBlur(): void;
+  /** Finds mistakes in the settings file's text. When given, they are underlined as you type. */
+  lint?(text: string): Promise<SettingsDiagnostic[]>;
 }
 
 // Colors come from CSS variables (styles.css) so dark/light follows the OS.
@@ -35,6 +39,13 @@ const theme = EditorView.theme({
     backgroundColor: "var(--selection) !important",
   },
   ".cm-searchMatch": { backgroundColor: "var(--match)" },
+  // The gutter only appears when there is something to show in it (lint markers, settings file).
+  ".cm-gutters": {
+    backgroundColor: "var(--bg-side)",
+    color: "var(--muted)",
+    border: "none",
+    borderRight: "1px solid var(--border)",
+  },
   ".cm-searchMatch-selected": { backgroundColor: "var(--selection)" },
 });
 
@@ -60,6 +71,35 @@ const jsonHighlight = HighlightStyle.define([
   { tag: [t.bracket, t.punctuation], color: "var(--hl-muted)" },
 ]);
 
+/** Colours, plus underlines for mistakes (checked by the app itself, so the editor and the file's
+ * reader always agree on what is wrong). */
+function settingsExtensions(handlers: Handlers): Extension[] {
+  const colours = [jsonc, syntaxHighlighting(jsonHighlight)];
+  const { lint } = handlers;
+  if (!lint) return colours;
+  return [
+    ...colours,
+    linter(
+      async (view) => {
+        try {
+          const found = await lint(view.state.doc.toString());
+          const length = view.state.doc.length;
+          return found.map((d) => ({
+            from: Math.min(d.from, length),
+            to: Math.min(Math.max(d.to, d.from), length),
+            severity: d.severity,
+            message: d.message,
+          }));
+        } catch {
+          return []; // if the check itself can't run, don't pretend there is a mistake
+        }
+      },
+      { delay: 300 },
+    ),
+    lintGutter(),
+  ];
+}
+
 function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean): Extension[] {
   const isMarkdown = ext === "md";
   return [
@@ -77,7 +117,7 @@ function extensionsFor(ext: string, handlers: Handlers, isLoading: () => boolean
     ]),
     isMarkdown ? [markdown({ base: markdownLanguage }), syntaxHighlighting(highlight)] : [],
     // The settings file is the only .json the app opens (see settings.rs).
-    ext === "json" ? [jsonc, syntaxHighlighting(jsonHighlight)] : [],
+    ext === "json" ? settingsExtensions(handlers) : [],
     theme,
     EditorView.updateListener.of((u) => {
       if (u.docChanged && !isLoading()) handlers.onChange();

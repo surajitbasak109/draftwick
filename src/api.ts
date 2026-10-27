@@ -60,9 +60,24 @@ export interface Settings {
 
 export interface LoadedSettings {
   settings: Settings;
-  /** Things in the file that were ignored or adjusted, worded for the user. */
+  /** Things in the file that were ignored or adjusted, worded for the user, each with its line. */
   problems: string[];
+  /** False when the file has a syntax mistake, so `settings` are only the defaults. */
+  valid: boolean;
 }
+
+/** One mistake in the settings file, positioned for the editor to underline. */
+export interface SettingsDiagnostic {
+  /** Offsets in UTF-16 units (what CodeMirror uses); `to` is exclusive. */
+  from: number;
+  to: number;
+  line: number;
+  severity: "error" | "warning";
+  message: string;
+}
+
+/** Checks the settings file's text as it is being edited, with the same rules the app applies. */
+export const checkSettings = (text: string) => call<SettingsDiagnostic[]>("check_settings", { text });
 
 export const getSettings = () => call<LoadedSettings>("get_settings");
 /**

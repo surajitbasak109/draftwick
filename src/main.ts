@@ -137,6 +137,8 @@ const editor = createEditor(document.querySelector<HTMLElement>("#editor")!, {
   onBlur: () => {
     if (autosaveOffReason(current) === null) void autosave.flush(false);
   },
+  // Mistakes in the settings file are underlined as you type.
+  lint: (text) => api.checkSettings(text),
 });
 
 const choicePrompt = createChoicePrompt();
@@ -486,10 +488,16 @@ function describeDelay(ms: number): string {
  */
 async function applySettings(announce: boolean) {
   try {
-    const { settings, problems } = await api.getSettings();
+    const { settings, problems, valid } = await api.getSettings();
+    if (!valid && announce) {
+      // The user just saved a file with a mistake in it: say where, and keep what was working.
+      toast(`Settings not applied. ${problems.join(" ")} Your previous settings are still in use.`, 12000);
+      return;
+    }
     autosave.setDelay(settings.autosave_delay_ms);
     if (problems.length > 0) {
-      toast(problems.join(" "), 9000);
+      const lead = valid ? "" : "settings.json has a mistake, so the defaults are in use. ";
+      toast(lead + problems.join(" "), 12000);
     } else if (announce) {
       toast(`Settings reloaded. Drafts save ${describeDelay(settings.autosave_delay_ms)} after you stop typing.`);
     }
