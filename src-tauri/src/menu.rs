@@ -9,9 +9,7 @@
 //! - an action without one is bound by the frontend, until it is given a menu item.
 
 use serde::Serialize;
-use tauri::menu::{
-    AboutMetadata, IsMenuItem, Menu, MenuEvent, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu,
-};
+use tauri::menu::{IsMenuItem, Menu, MenuEvent, MenuItem, MenuItemKind, Submenu};
 use tauri::{AppHandle, Emitter, Runtime};
 
 use crate::error::{AppError, AppResult};
@@ -92,6 +90,15 @@ pub const ACTIONS: &[Action] = &[
         needs_folder: true,
     },
     // Help is harmless without a notes folder, so it stays available on the welcome screen.
+    // About is an in-app dialog rather than the native one: the native GTK dialog has no parent
+    // window, so the window manager places it wherever it likes instead of centring it.
+    Action {
+        id: "about",
+        label: "About",
+        accelerator: None,
+        menu: Some("Help"),
+        needs_folder: false,
+    },
     Action {
         id: "shortcuts",
         label: "Keyboard shortcuts",
@@ -116,27 +123,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             .map(|a| MenuItem::with_id(app, a.id, a.label, !a.needs_folder, a.accelerator))
             .collect::<tauri::Result<Vec<_>>>()?;
 
-        // About is a native dialog; it is not an action the frontend has to handle.
-        let about = if name == "Help" {
-            Some(PredefinedMenuItem::about(
-                app,
-                Some("About"),
-                Some(AboutMetadata {
-                    name: Some("Draftwick".into()),
-                    version: Some(env!("CARGO_PKG_VERSION").into()),
-                    comments: Some("A fast, minimal editor for Markdown and text drafts.".into()),
-                    ..Default::default()
-                }),
-            )?)
-        } else {
-            None
-        };
-
-        let mut refs: Vec<&dyn IsMenuItem<R>> = Vec::new();
-        if let Some(about) = &about {
-            refs.push(about);
-        }
-        refs.extend(items.iter().map(|i| i as &dyn IsMenuItem<R>));
+        let refs: Vec<&dyn IsMenuItem<R>> = items.iter().map(|i| i as &dyn IsMenuItem<R>).collect();
         menus.push(Submenu::with_items(app, name, true, &refs)?);
     }
 
@@ -175,6 +162,28 @@ pub fn get_actions() -> Vec<ActionInfo> {
             needs_folder: a.needs_folder,
         })
         .collect()
+}
+
+#[derive(Serialize)]
+pub struct AboutInfo {
+    pub name: String,
+    pub version: String,
+    pub description: String,
+}
+
+/// What the About dialog shows. The version comes from the app's own package info, so it can't
+/// drift from the build, and the description from Cargo.toml.
+#[tauri::command]
+pub fn get_about(app: AppHandle) -> AboutInfo {
+    AboutInfo {
+        name: app
+            .config()
+            .product_name
+            .clone()
+            .unwrap_or_else(|| "Draftwick".into()),
+        version: app.package_info().version.to_string(),
+        description: env!("CARGO_PKG_DESCRIPTION").into(),
+    }
 }
 
 /// Greys menu items that need a notes folder in or out. Called with `false` while the welcome
@@ -234,10 +243,9 @@ mod tests {
 
     #[test]
     fn menu_contents_match_the_spec() {
-        // As specified by the user: File > Open, Save, Close. Help > About (native), Keyboard
-        // shortcuts.
+        // As specified by the user: File > Open, Save, Close. Help > About, Keyboard shortcuts.
         assert_eq!(menu_labels("File"), ["Open", "Save", "Close"]);
-        assert_eq!(menu_labels("Help"), ["Keyboard shortcuts"]);
+        assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
     }
 
     #[test]
@@ -258,9 +266,9 @@ mod tests {
 
     #[test]
     fn items_in_a_menu_that_have_no_shortcut_are_still_reachable() {
-        // Keyboard shortcuts is menu-only; every other menu item must also have a shortcut.
+        // The Help items are menu-only; every other menu item must also have a shortcut.
         for action in ACTIONS.iter().filter(|a| a.menu.is_some()) {
-            if action.id != "shortcuts" {
+            if action.menu != Some("Help") {
                 assert!(action.accelerator.is_some(), "{} has no shortcut", action.id);
             }
         }
@@ -269,7 +277,7 @@ mod tests {
     #[test]
     fn only_help_stays_enabled_without_a_notes_folder() {
         for action in ACTIONS {
-            assert_eq!(!action.needs_folder, action.id == "shortcuts", "{}", action.id);
+            assert_eq!(!action.needs_folder, action.menu == Some("Help"), "{}", action.id);
         }
     }
 }

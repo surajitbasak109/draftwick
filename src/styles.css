@@ -175,7 +175,8 @@ body {
 #switcher,
 #rename,
 #choice,
-#help {
+#help,
+#about {
   position: fixed;
   inset: 0;
   display: flex;
@@ -188,8 +189,18 @@ body {
 #switcher[hidden],
 #rename[hidden],
 #choice[hidden],
-#help[hidden] {
+#help[hidden],
+#about[hidden] {
   display: none;
+}
+
+/* Dialogs sit in the middle of the window. The quick switcher and rename prompt stay near the
+   top like a command palette. */
+#choice,
+#help,
+#about {
+  align-items: center;
+  padding-top: 0;
 }
 
 #choice-message {
@@ -357,6 +368,47 @@ body {
 
 #help button {
   padding: 7px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- Help > About ---------- */
+
+#about .panel {
+  width: min(380px, 90vw);
+  text-align: center;
+}
+
+#about h2 {
+  margin: 0;
+  padding: 24px 18px 4px;
+  font-size: 22px;
+}
+
+#about p {
+  margin: 0;
+  padding: 4px 24px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+#about-description {
+  color: var(--fg);
+}
+
+#about .actions {
+  display: flex;
+  justify-content: center;
+  padding: 18px 18px 22px;
+}
+
+#about button {
+  padding: 7px 22px;
   border: 1px solid var(--accent);
   border-radius: 6px;
   background: var(--accent);

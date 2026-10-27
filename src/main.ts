@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toCombo } from "./accelerators";
+import { createAboutDialog } from "./about";
 import * as api from "./api";
 import { createAutosave } from "./autosave";
 import { createChoicePrompt, type Choice, type ChoiceOptions } from "./choice";
@@ -157,6 +158,7 @@ const switcher = createSwitcher(
 const renamePrompt = createRenamePrompt(renameCurrent, () => editor.focus());
 
 const shortcutsHelp = createShortcutsHelp(() => editor.focus());
+const aboutDialog = createAboutDialog(() => editor.focus());
 
 async function refreshSidebar() {
   try {
@@ -422,6 +424,11 @@ const handlers: Record<string, () => void> = {
   toggle_sidebar: () => sidebar.toggle(),
   change_folder: () => void changeNotesDir(),
   rename: () => startRename(),
+  about: () =>
+    void api
+      .getAbout()
+      .then((info) => aboutDialog.open(info))
+      .catch((e) => toast(`Couldn't open About: ${errorMessage(e)}`)),
   shortcuts: () => shortcutsHelp.open(actionTable),
 };
 

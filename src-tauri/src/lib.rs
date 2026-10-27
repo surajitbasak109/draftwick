@@ -11,6 +11,7 @@ pub fn run() {
         .on_menu_event(menu::on_event)
         .invoke_handler(tauri::generate_handler![
             menu::get_actions,
+            menu::get_about,
             menu::set_menu_enabled,
             config::get_config,
             config::set_notes_dir,

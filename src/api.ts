@@ -48,6 +48,14 @@ export interface ActionInfo {
 }
 
 export const getActions = () => call<ActionInfo[]>("get_actions");
+
+export interface AboutInfo {
+  name: string;
+  version: string;
+  description: string;
+}
+
+export const getAbout = () => call<AboutInfo>("get_about");
 /** Greys the menu items that need a notes folder in or out. */
 export const setMenuEnabled = (enabled: boolean) => call<void>("set_menu_enabled", { enabled });
 export const getConfig = () => call<Config>("get_config");

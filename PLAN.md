@@ -192,7 +192,7 @@ How the specified items map onto what already exists (each is just another way t
 | File → Open | Open any `.md`/`.txt` file via the file dialog | `Ctrl+O` |
 | File → Save | Explicit save (the only way to save a file outside the notes folder, an emptied note, or a note whose file was deleted) | `Ctrl+S` |
 | File → Close | Close the current note and show a new blank one, asking Save / Don't Save / Cancel first where the usual rules require it | `Ctrl+W` |
-| Help → About | Show the app name, version (from `tauri.conf.json`), and a one-line description | none |
+| Help → About | Show the app name, version and a one-line description in a centred in-app dialog | none |
 | Help → Keyboard shortcuts | Show a list of every shortcut | none |
 
 Rules for the menubar:
@@ -217,14 +217,16 @@ Rules for the menubar:
 - **Accelerators can swallow keys.** A GTK menu accelerator may consume the key press before the webview sees it. This must be checked on Ubuntu when building: each shortcut must fire exactly once (not zero times, not twice), including while the editor has focus. Don't give a menu item an accelerator that clashes with a CodeMirror key until that is confirmed.
 - **Edit menu items must drive CodeMirror**, not the webview's built-in undo/copy/paste. CodeMirror keeps its own undo history, so Undo/Redo/Find/Replace items should emit events that run the editor commands.
 - **Inert on the welcome screen:** items that need a notes folder start greyed out; the frontend calls `set_menu_enabled(true)` once a folder exists. The frontend also ignores the action itself, as a second guard.
-- **About:** use the native About dialog (`PredefinedMenuItem::about` with name, version, description) rather than a custom window.
+- **About is an in-app dialog, not the native one.** The native GTK About dialog is created without a parent window, so the window manager places it wherever it likes (and Wayland does not let an app position a window), which left it off-centre. The in-app dialog is centred in the window at any size. Name, version and description come from the `get_about` command (package info and `Cargo.toml`), so they can't drift from the build.
 - **Testing:** the frontend half (id → action, welcome-screen guard) can still be tested in the browser with the stand-in backend; the native menu itself can only be checked in the real window.
 
 **What was built:** `src-tauri/src/menu.rs` (the action table, the menu, the event bridge, `get_actions`, `set_menu_enabled`); `accelerators.ts`, `shortcutsHelp.ts`, and a single `runAction(id)` in `main.ts` that both menu clicks and key presses go through.
 
 **Who owns each key (so it fires exactly once):** an action with a menu item (Open `Ctrl+O`, Save `Ctrl+S`, Close `Ctrl+W`) is taken by the native accelerator first. Because it was not possible to confirm from outside the real window whether GTK passes those keys through while the editor has focus, the frontend also listens for them as a safety net (`keyForMenuAction`): if the key reaches the page and the menu does not report the same action within 150 ms, the frontend runs it. If the menu's event arrives (in either order), the frontend does nothing, so the action never runs twice. Actions without a menu item (New note, Go to note, Toggle sidebar, Change notes folder, Rename) are bound by the frontend only. Moving an action into a menu is a one-line change to its `menu` field in the table.
 
-**Still to verify in the real window on Ubuntu** (cannot be checked in a browser): every native accelerator fires once while the editor has focus; File items are greyed out on the welcome screen; About opens the native dialog. A debug build prints `[menu] <id>` to the terminal for each native menu event.
+**Still to verify in the real window on Ubuntu** (cannot be checked in a browser): File items are greyed out on the welcome screen. (Confirmed by the user in the real window: File → Save and `Ctrl+S` work.) A debug build prints `[menu] <id>` to the terminal for each native menu event.
+
+**Dialog placement:** dialogs (About, Keyboard shortcuts, Save / Don't Save prompts) are centred in the window; the quick switcher and rename prompt stay near the top like a command palette.
 
 - **Done when:** the native menus above exist, every item does exactly what its shortcut does (and each shortcut still fires exactly once), menus are greyed out on the welcome screen, and Help → Keyboard shortcuts lists the real shortcuts.
 
