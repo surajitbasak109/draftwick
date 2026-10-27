@@ -9,7 +9,7 @@ A small cross-platform desktop editor for quick drafts (meeting notes, pasted ch
 - **Consent: nothing happens unless the user asked for it.** No system dialog on launch; no folder or file created, changed or recreated without an explicit action (a clicked button, menu item or shortcut). If you find or add behaviour that acts on its own, say so and offer alternatives instead of shipping it quietly.
 - **Use pnpm**, never npm or npx. There must be no `package-lock.json`; `pnpm-lock.yaml` is the lockfile.
 - **Say "draft" and "draft directory"** in anything the user sees, not "note" or "notes folder". Internal names keep the old words on purpose (`notes_dir` in `config.json`, `notes.rs`, `NoteMeta`): renaming them would break existing config files for no benefit.
-- **Commit only when asked, and never push** (the repo has no remote). One commit per request, with a message that explains the why; see `git log` for the style.
+- **Commit only when asked, and never push** (the user pushes to the GitHub remote themselves). One commit per request, with a message that explains the why; see `git log` for the style.
 - Ask rather than guess on product decisions. The plan records the ones already made.
 
 ## The task list

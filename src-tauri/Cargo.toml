@@ -2,6 +2,8 @@
 name = "draftwick"
 version = "0.1.0"
 description = "A fast, minimal editor for quick Markdown and text drafts"
+license = "MIT"
+repository = "https://github.com/surajitbasak109/draftwick"
 edition = "2021"
 
 [lib]

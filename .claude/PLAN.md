@@ -7,7 +7,7 @@ It replaces Sublime Text for that one job. Only `.md` and `.txt` files (one exce
 
 ## Status and next steps
 
-*As of commit `7dbebff` on `main`. The repo has no remote.*
+*As of commit `7dbebff` on `main`. The remote is `origin` on GitHub (surajitbasak109/draftwick); the user pushes, the agent never does.*
 
 **Built and committed**
 - **Editor and drafts (M0 to M5):** CodeMirror editor, welcome screen that asks for a draft directory (no dialog opens by itself), draft files named by date and time, sidebar, quick switcher, rename.

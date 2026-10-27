@@ -19,7 +19,15 @@
   const CONFIG_DIR = "/standin/config";
   const now = Date.now();
   const files = {
-    [`${DIR}/2026-10-27 09-30.md`]: { text: "# Standup\n\n- ship the status bar\n- check the icon\n", modified: now - 3_600_000 },
+    [`${DIR}/2026-10-27 09-30.md`]: {
+      text:
+        "# Team standup\n\nQuick notes from this morning. **Nothing to decide**, just things to *remember*.\n\n" +
+        "## Done\n\n- Settings file with live checking\n- Dark and light themes\n- Status bar with line and column\n\n" +
+        "## Next\n\n1. Try the installed `.deb`\n2. Write the README\n3. Pick a licence\n\n" +
+        "> Drafts are saved by themselves a few seconds after you stop typing.\n\n" +
+        "```ts\nconst greeting = \"hello, draft\";\n```\n",
+      modified: now - 3_600_000,
+    },
     [`${DIR}/2026-10-26 16-05.md`]: { text: "Ideas for **Draftwick**:\n\n1. font settings\n2. save as\n", modified: now - 86_400_000 },
     [`${DIR}/shopping.txt`]: { text: "milk\neggs\nbread\n", modified: now - 172_800_000 },
   };
