@@ -72,10 +72,13 @@ Checksums let people verify their download.
 
 ```bash
 cd src-tauri/target/release/bundle
-sha256sum deb/Draftwick_0.2.0_amd64.deb appimage/Draftwick_0.2.0_amd64.AppImage > SHA256SUMS.txt
+(cd deb && sha256sum Draftwick_0.2.0_amd64.deb; cd ../appimage && sha256sum Draftwick_0.2.0_amd64.AppImage) > SHA256SUMS.txt
 cat SHA256SUMS.txt
 cd -
 ```
+
+The names in the file have no folder in front of them, so people can run `sha256sum -c SHA256SUMS.txt`
+in the folder where they saved the downloads.
 
 ## 6. Commit and tag
 
