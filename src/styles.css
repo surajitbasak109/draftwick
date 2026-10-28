@@ -25,6 +25,7 @@
   --danger-bg: rgba(240, 113, 106, 0.14);
   --ok: #5fc48a;
   --warn: #e5b567;
+  --warn-text: #e5b567;
   --mono: monospace;
   /* Set from the font_size, font_family and wrap_column settings (see applyAppearance in main.ts). */
   --editor-font-size: 14px;
@@ -43,7 +44,7 @@
     --bg: #ffffff;
     --bg-side: #f3f4f6;
     --fg: #24272b;
-    --muted: #6b7280;
+    --muted: #4b5563;
     --border: #e1e3e8;
     --accent: #2563eb;
     --selection: #bcd5ff;
@@ -51,12 +52,12 @@
     --hl-heading: #1d4ed8;
     --hl-link: #0f766e;
     --hl-code: #b45309;
-    --hl-muted: #6b7280;
+    --hl-muted: #4b5563;
     --hl-property: #1d4ed8;
     --hl-string: #15803d;
     --hl-number: #b45309;
     --hl-keyword: #7e22ce;
-    --hl-comment: #6b7280;
+    --hl-comment: #4b5563;
     --toast-bg: #24272b;
     --menu-bg: #ffffff;
     --menu-border: #dcdfe5;
@@ -66,6 +67,7 @@
     --danger-bg: rgba(201, 55, 44, 0.09);
     --ok: #1f8a4c;
     --warn: #a86a0c;
+    --warn-text: #8a5200;
     color-scheme: light;
   }
 }
@@ -74,7 +76,7 @@
   --bg: #ffffff;
   --bg-side: #f3f4f6;
   --fg: #24272b;
-  --muted: #6b7280;
+  --muted: #4b5563;
   --border: #e1e3e8;
   --accent: #2563eb;
   --selection: #bcd5ff;
@@ -82,12 +84,12 @@
   --hl-heading: #1d4ed8;
   --hl-link: #0f766e;
   --hl-code: #b45309;
-  --hl-muted: #6b7280;
+  --hl-muted: #4b5563;
   --hl-property: #1d4ed8;
   --hl-string: #15803d;
   --hl-number: #b45309;
   --hl-keyword: #7e22ce;
-  --hl-comment: #6b7280;
+  --hl-comment: #4b5563;
   --toast-bg: #24272b;
   --menu-bg: #ffffff;
   --menu-border: #dcdfe5;
@@ -97,6 +99,7 @@
   --danger-bg: rgba(201, 55, 44, 0.09);
   --ok: #1f8a4c;
   --warn: #a86a0c;
+  --warn-text: #8a5200;
   color-scheme: light;
 }
 
@@ -753,7 +756,7 @@ body {
 
 .setting-tag.changed {
   background: var(--danger-bg);
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 p.setting-facts {
