@@ -12,6 +12,7 @@ import { detectEol, eolName } from "./lineEndings";
 import { markdownToHtml } from "./markdownHtml";
 import { createRenamePrompt } from "./rename";
 import { createShortcutsHelp } from "./shortcutsHelp";
+import { createSettingsDialog } from "./settingsDialog";
 import { createSidebar } from "./sidebar";
 import { createSwitcher } from "./switcher";
 import { installShortcuts } from "./shortcuts";
@@ -195,6 +196,10 @@ const renamePrompt = createRenamePrompt(renameChosen, () => editor.focus());
 
 const shortcutsHelp = createShortcutsHelp(() => editor.focus());
 const aboutDialog = createAboutDialog(() => editor.focus());
+const settingsDialog = createSettingsDialog(
+  () => void openSettingsFile(),
+  () => editor.focus(),
+);
 
 async function refreshSidebar() {
   try {
@@ -591,6 +596,7 @@ const handlers: Record<string, () => void> = {
       .then((info) => aboutDialog.open(info))
       .catch((e) => toast(`Couldn't open About: ${errorMessage(e)}`)),
   shortcuts: () => shortcutsHelp.open(actionTable),
+  show_settings: () => settingsDialog.open(appliedSettings),
   open_settings: () => void openSettingsFile(),
   reload_settings: () => void applySettings(true),
   toggle_wrap: () => toggleWrap(),

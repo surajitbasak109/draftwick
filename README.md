@@ -87,7 +87,7 @@ On macOS, read `Ctrl` as `Cmd`. The full list is under **Help > Keyboard shortcu
 
 ## Settings
 
-Choose **Settings > Open settings file**. Draftwick creates `settings.json` from a commented template and opens it in its own editor. Remove the `//` in front of a setting to change it; anything you leave out uses its default.
+**Settings > Show settings** lists every setting with its current value, what it does and its default. To change one, choose **Settings > Open settings file**. Draftwick creates `settings.json` from a commented template and opens it in its own editor. Remove the `//` in front of a setting to change it; anything you leave out uses its default.
 
 | Setting | Default | Allowed |
 | --- | --- | --- |

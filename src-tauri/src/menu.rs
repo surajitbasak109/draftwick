@@ -96,6 +96,8 @@ pub const ACTIONS: &[Action] = &[
     // ---- Settings ----
     // The settings file opens in the editor, which is hidden on the welcome screen, so opening it
     // waits for a draft directory. Reloading needs no editor, so it works from the start.
+    // A read-only list of every setting; the file itself is still edited by hand.
+    Action::new("show_settings", "Show settings", None, Some("Settings"), true),
     Action::new("open_settings", "Open settings file", None, Some("Settings"), true),
     Action::new("reload_settings", "Reload settings", None, Some("Settings"), false),
     // ---- Keyboard shortcut only, for now ----
@@ -302,7 +304,7 @@ mod tests {
         );
         assert_eq!(menu_labels("Edit"), ["Undo", "Redo", "Copy as HTML"]);
         assert_eq!(menu_labels("View"), ["Show sidebar", "Toggle wrap", "Enter full screen"]);
-        assert_eq!(menu_labels("Settings"), ["Open settings file", "Reload settings"]);
+        assert_eq!(menu_labels("Settings"), ["Show settings", "Open settings file", "Reload settings"]);
         assert_eq!(menu_labels("Help"), ["About", "Keyboard shortcuts"]);
     }
 
