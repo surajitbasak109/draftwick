@@ -904,6 +904,14 @@ mod tests {
     }
 
     #[test]
+    fn the_example_file_keeps_its_lines_short() {
+        // Long comment lines wrap in the editor and bury the values; keep them readable.
+        for line in DEFAULT_FILE.lines() {
+            assert!(line.chars().count() <= 80, "line is too long ({}): {line}", line.chars().count());
+        }
+    }
+
+    #[test]
     fn the_example_file_is_valid_and_lists_every_setting() {
         let loaded = parse(DEFAULT_FILE);
         assert!(loaded.valid && loaded.problems.is_empty(), "{:?}", loaded.problems);

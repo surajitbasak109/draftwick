@@ -133,7 +133,7 @@ const jsonHighlight = HighlightStyle.define([
   { tag: t.string, color: "var(--hl-string)" },
   { tag: t.number, color: "var(--hl-number)" },
   { tag: t.atom, color: "var(--hl-keyword)" },
-  { tag: t.comment, color: "var(--hl-comment)", fontStyle: "italic" },
+  { tag: t.comment, color: "var(--hl-comment)" }, // not italic: italic monospace is hard to read
   { tag: [t.bracket, t.punctuation], color: "var(--hl-muted)" },
 ]);
 

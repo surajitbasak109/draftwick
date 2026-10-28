@@ -1,42 +1,33 @@
 {
   // Draftwick settings.
-  //
-  // Only the settings you want to change need to be listed here; anything missing uses its
-  // default. To change one, remove the "//" in front of it, edit the value, save this file, then
-  // choose Settings > Reload settings in Draftwick.
+  // List only what you want to change; anything left out uses its default.
+  // To change one: remove the "//" in front of it, edit the value, and save.
+  // The change applies at once. Settings > Show settings explains each one.
 
-  // How long to wait after you stop typing before a draft is saved, in milliseconds.
-  // Every keystroke restarts the wait. Allowed range: 500 (half a second) to 30000 (30 seconds).
-  // A longer wait means fewer writes; a shorter one means less is lost if the app or the
-  // computer stops suddenly. Drafts are always saved when you switch drafts or quit.
-  // Default: 5000 (5 seconds).
+  // How long to wait after you stop typing before a draft is saved (ms).
+  // Allowed: 500 to 30000. Default: 5000.
   // "autosave_delay_ms": 5000
 
-  // The colour theme: "system" follows your operating system's light or dark setting, "dark" and
-  // "light" always use that one. Default: "system".
+  // Colours: "system" follows your operating system, or "dark" or "light".
+  // Default: "system".
   // "theme": "system"
 
-  // The size of the text in the editor, in pixels. Allowed range: 8 to 48. Default: 14.
+  // Editor text size, in pixels. Allowed: 8 to 48. Default: 14.
   // "font_size": 14
 
-  // The font used in the editor: one font name that is installed on your computer, such as
-  // "Fira Code" or "JetBrains Mono". Leave it out to use the system's monospace font.
+  // Editor font: one installed font name. Default: the system monospace font.
   // "font_family": "JetBrains Mono"
 
-  // How many characters wide a line is before it wraps onto the next line. This only changes how
-  // the text is shown; no line break is added to the file. Allowed: 0 to wrap at the edge of the
-  // window, or 20 to 300 to keep lines that many characters wide. Default: 0.
+  // Characters per line before wrapping (display only, no line breaks added).
+  // Allowed: 0 (the window edge), or 20 to 300. Default: 0.
   // "wrap_column": 0
 
   // Show a line number beside each line. Default: false.
   // "show_line_numbers": false
 
-  // How wide a tab is, in characters. Only 2, 4 or 8 are allowed; anything else is reported and
-  // 4 is used. Default: 4.
+  // Width of a tab, in characters. Allowed: 2, 4 or 8. Default: 4.
   // "tab_size": 4
 
-  // What the Tab key types: true inserts spaces (up to the next tab stop), false inserts a tab
-  // character. With several lines selected, Tab indents them all and Shift+Tab takes the indent
-  // back. Default: true.
+  // What Tab types: true for spaces, false for a tab character. Default: true.
   // "translate_tabs_to_spaces": true
 }

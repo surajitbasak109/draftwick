@@ -32,6 +32,8 @@ The agent cannot see or click the real window, so these are yours. Everything be
 
 - [ ] **Light theme: darker grey text.** Built, needs your check. The light theme's grey was borderline (4.2 to 4.8 : 1 against the guideline 4.5, and the amber "changed" tag 3.7 : 1). The grey is now `#4b5563` (6.6 to 7.6 : 1), which also darkens the Markdown markers and comments, and the amber tag text is `#8a5200`. Dark theme unchanged. Check the status bar, sidebar hints, tags and dialog small print in the light theme.
 
+- [ ] **Settings file: shorter, easier to read comments.** Built, needs your check. `settings.example.jsonc` (the template for new files) now has one short sentence per setting and a second line with the allowed values and default, no line over 80 characters (a test enforces it); the header no longer tells you to reload (saving applies at once); comments in the settings editor are no longer italic. Your own `~/.config/draftwick/settings.json` was rewritten with the new comments and **your values kept** (a copy of the old file was saved in the session scratch folder). Check it in the editor, in light and dark.
+
 ## M6: packaging
 
 - [x] `pnpm tauri build` produces the `.deb` (2.1 MiB) and the AppImage (84.5 MiB); both built on 2026-10-27.
